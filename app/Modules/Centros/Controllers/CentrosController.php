@@ -1,5 +1,5 @@
 <?php
-
+//crud centros
 namespace App\Modules\Centros\Controllers;
 
 use App\Http\Controllers\Controller;
