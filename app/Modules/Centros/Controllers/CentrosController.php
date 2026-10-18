@@ -7,7 +7,6 @@ use App\Modules\Centros\Facades\CentroFacade;
 use App\Modules\Centros\Requests\RegistroCentroRequest;
 use App\Modules\Centros\Requests\ActualizarCentroRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class CentrosController extends Controller
 {
