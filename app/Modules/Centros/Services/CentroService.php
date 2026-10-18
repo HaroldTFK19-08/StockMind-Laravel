@@ -4,7 +4,6 @@ namespace App\Modules\Centros\Services;
 
 use App\Modules\Centros\Models\Trainingcenter;
 use App\Modules\Shared\Services\CloudinaryService;
-use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -14,12 +13,10 @@ class CentroService
     public function __construct(
         private CloudinaryService $cloudinaryService
     ) {}
-
     public function listar()
     {
         return Trainingcenter::latest()->paginate(10);
     }
-
     public function mostrar(int $id): Trainingcenter
     {
         return Trainingcenter::findOrFail($id);
