@@ -15,7 +15,7 @@ class CentroService
     ) {}
     public function listar()
     {
-        return Trainingcenter::latest()->paginate(10);
+        return Trainingcenter::latest()->get();
     }
     public function mostrar(int $id): Trainingcenter
     {
