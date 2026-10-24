@@ -8,26 +8,31 @@ use App\Modules\Categorias\Models\Category;
 class CategoriaFacade
 {
     public function __construct(
-        private CategoriaService $centroService
+        private CategoriaService $categoriaService
     ) {}
+
     public function listar()
     {
-        return $this->centroService->listar();
+        return $this->categoriaService->listar();
     }
+
     public function mostrar(int $id): Category
     {
-        return $this->centroService->mostrar($id);
+        return $this->categoriaService->mostrar($id);
     }
+
     public function crear(array $datos): Category
     {
-        return $this->centroService->registrar($datos);
+        return $this->categoriaService->crear($datos);
     }
+
     public function actualizar(int $id, array $datos): Category
     {
-        return $this->centroService->actualizar($id, $datos);
+        return $this->categoriaService->actualizar($id, $datos);
     }
+
     public function eliminar(int $id): void
     {
-        $this->centroService->eliminar($id);
+        $this->categoriaService->eliminar($id);
     }
 }

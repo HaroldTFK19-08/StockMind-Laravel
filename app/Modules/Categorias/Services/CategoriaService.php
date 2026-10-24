@@ -7,34 +7,48 @@ use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 
 class CategoriaService
 {
-    public function listar(): Category
+    public function listar()
     {
-        return Category::latest()->paginate(5);
+        return Category::withCount('elements')
+            ->latest()
+            ->paginate(10);
     }
+
     public function mostrar(int $id): Category
     {
-        $categoria = Category::with(
-            [
-                'elements' => function ($query) {
-                    $query->select('id', 'nombre', 'category_id');
-                }
-            ]
-        )->findOrFail($id);
-        return $categoria;
+        return Category::with([
+            'elements' => function ($query) {
+                $query->select('id', 'nombre', 'category_id');
+            }
+        ])
+            ->withCount('elements')
+            ->findOrFail($id);
     }
-    public function registrar(array $datos): Category
+
+    public function crear(array $datos): Category
     {
-        return Category::create($datos);
+        $categoria = Category::create($datos);
+
+        return $this->mostrar($categoria->id);
     }
+
     public function actualizar(int $id, array $datos): Category
     {
-        $categoria = Category::findOrFail($id);
+        $categoria = $this->mostrar($id);
         $categoria->update($datos);
-        return $categoria->refresh();
+
+        return $this->mostrar($id);
     }
+
     public function eliminar(int $id): void
     {
-        $categoria = Category::findOrFail($id);
+        $categoria = $this->mostrar($id);
+
+        if ($categoria->elements()->exists()) {
+            throw new ReglasNegocioExceptions(
+                'No se puede eliminar la categoría porque tiene elementos asociados.'
+            );
+        }
         $categoria->delete();
     }
 }

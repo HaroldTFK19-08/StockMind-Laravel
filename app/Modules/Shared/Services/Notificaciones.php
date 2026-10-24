@@ -14,16 +14,16 @@ class NotificacionService
     {
         return Notification::create([
             'usuario_id' => $usuarioId,
-            'titulo'     => $titulo,
-            'mensaje'    => $mensaje,
-            'leida'      => false,
+            'titulo' => $titulo,
+            'mensaje' => $mensaje,
+            'leida' => false,
         ]);
     }
 
     public function aRol(string $rol, string $titulo, string $mensaje): void
     {
-        User::whereHas('roles', fn ($q) => $q->where('nombre', $rol))
-            ->where('estado', 'activo')
+        User::whereHas('roles', fn ($q) => $q->where('rol', $rol))
+            ->where('estado', 'Activo')
             ->pluck('id')
             ->each(fn ($id) => $this->aUsuario($id, $titulo, $mensaje));
     }
