@@ -4,7 +4,7 @@ namespace App\Modules\Usuarios\Models;
 
 use App\Modules\Asignaciones\Models\Assignment;
 use App\Modules\Fichas\Models\Coursegroup;
-use App\Modules\Reports\Models\Report;
+use App\Modules\Reportes\Models\Report;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

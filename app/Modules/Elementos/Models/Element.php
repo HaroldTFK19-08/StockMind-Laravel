@@ -8,7 +8,7 @@ use App\Modules\Asignaciones\Models\Assignment;
 use App\Modules\Categorias\Models\Category;
 use App\Modules\Movimientos\Models\Motion;
 use App\Modules\Prestamos\Models\Loan;
-use App\Modules\Reports\Models\Report;
+use App\Modules\Reportes\Models\Report;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +28,7 @@ class Element extends Model
         'codigo_inventario',
         'nombre',
         'img_elemento',
+        'img_elemento_public_id',
         'descripcion',
         'serial',
         'marca',

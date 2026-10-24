@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Reports\Models;
+namespace App\Modules\Reportes\Models;
 
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Usuarios\Models\Apprentice;
@@ -21,6 +21,7 @@ class Report extends Model
         'descripcion',
         'fecha_reporte',
         'foto_probatorio',
+        'foto_probatorio_public_id',
         'estado',
     ];
 
