@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('loans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('element_id')->constrained('elements');
-            $table->foreignId('teacher_id')->constrained('teachers');
+            $table->foreignId('element_id')->constrained('elements')->cascadeOnDelete();
+            $table->foreignId('teacher_id')->constrained('teachers')->cascadeOnDelete();
             $table->dateTime('fecha_prestamo')->useCurrent();
             $table->date('fecha_devolucion_esperada');
             $table->dateTime('fecha_devolucion_real')->nullable();

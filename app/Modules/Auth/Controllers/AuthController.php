@@ -3,43 +3,48 @@
 namespace App\Modules\Auth\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Auth\Facades\UserFacade;
-use App\Modules\Auth\Requests\RegisterRequest;
-use App\Modules\Auth\Facades\LoginFacade;
-use App\Modules\Auth\Facades\RegisterFacade;
+use App\Modules\Auth\Facades\AuthFacade;
 use App\Modules\Auth\Requests\LoginRequest;
-use Illuminate\Http\Request;
+use App\Modules\Auth\Requests\RegisterRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Js;
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
+    // Se inyecta la Facade, igual que en los demás módulos
+    public function __construct(
+        private AuthFacade $authFacade
+    ) {}
+    // POST /api/v1/auth/register
     public function register(RegisterRequest $request): JsonResponse
     {
-        $usuario = RegisterFacade::registrar(
-            $request->validated()
-        );
+        $usuario = $this->authFacade->registrar($request->validated());
         return response()->json([
-            "mensaje" => "Usuario creado correctamente",
-            "usuario" => $usuario
-        ]);
+            'mensaje' => 'Registro exitoso. Un administrador debe aprobar tu cuenta.',
+            'usuario' => $usuario,
+        ], 201);
     }
+    // POST /api/v1/auth/login
     public function login(LoginRequest $request): JsonResponse
     {
-        $login = LoginFacade::login(
-            $request->validated()
+        // Devuelve: mensaje, token y usuario con sus roles
+        return response()->json(
+            $this->authFacade->login($request->validated())
         );
-        return response()->json([
-            'mensaje' => $login['mensaje'],
-            'usuario' => $login['usuario'],
-        ], 200);
     }
+    // POST /api/v1/auth/logout  (requiere token)
     public function logout(Request $request): JsonResponse
     {
-        LoginFacade::logout();
-
+        $this->authFacade->logout($request->user());
         return response()->json([
             'mensaje' => 'Sesión cerrada correctamente.',
-        ], 200);
+        ]);
+    }
+    // GET /api/v1/auth/me  (requiere token)
+    public function me(Request $request): JsonResponse
+    {
+        return response()->json(
+            $this->authFacade->perfil($request->user())
+        );
     }
 }

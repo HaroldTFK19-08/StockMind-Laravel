@@ -1,13 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Modules\Auth\Controllers\AuthController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
-    // Registro de usuarios
+    // Rutas públicas: no necesitan token
     Route::post('/register', [AuthController::class, 'register']);
-    // Inicio de sesión
     Route::post('/login', [AuthController::class, 'login']);
-    // Cierre de sesión
-    Route::post('/logout', [AuthController::class, 'logout']);
+    // Rutas protegidas
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me', [AuthController::class, 'me']);
+    });
 });

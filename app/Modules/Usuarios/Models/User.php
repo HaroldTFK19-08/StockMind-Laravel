@@ -56,12 +56,10 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
-    // El modelo no está en App\Models, así que se indica la factory a mano
     protected static function newFactory(): Factory
     {
         return UserFactory::new();
     }
-    // Pivote user_rol (hasta 2 roles por usuario)
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Rol::class, 'user_rol', 'users_id', 'rol_id')
@@ -75,7 +73,6 @@ class User extends Authenticatable
     {
         return $this->hasOne(Teacher::class, 'user_id');
     }
-    // user_id no es unique en danteaccounts: un usuario puede tener varios periodos/ambientes
     public function danteaccounts(): HasMany
     {
         return $this->hasMany(Danteaccount::class, 'user_id');
