@@ -17,13 +17,6 @@ class CloudinaryService
         $cloudName = config('services.cloudinary.cloud_name');
         $apiKey = config('services.cloudinary.api_key');
         $apiSecret = config('services.cloudinary.api_secret');
-
-        if (!$cloudName || !$apiKey || !$apiSecret) {
-            throw new RuntimeException(
-                'Faltan las credenciales de Cloudinary.'
-            );
-        }
-
         $this->cloudinary = new Cloudinary([
             'cloud' => [
                 'cloud_name' => $cloudName,
@@ -37,20 +30,22 @@ class CloudinaryService
     }
     public function subir(
         UploadedFile $archivo,
-        string $carpeta
+        string $carpeta,
+        string $sigla = "stockmind"
     ): array {
+        $ruta = trim($sigla . '/' . $carpeta,);
         try {
             $resultado = $this->cloudinary
                 ->uploadApi()
                 ->upload($archivo->getRealPath(), [
-                    'asset_folder' => $carpeta,
+                    'asset_folder' => $ruta,
                     'resource_type' => 'image',
                 ]);
             return [
                 'url' => $resultado['secure_url'],
                 'public_id' => $resultado['public_id'],
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
             throw new ReglasNegocioExceptions(
                 'No fue posible subir la imagen. Inténtalo nuevamente.',
