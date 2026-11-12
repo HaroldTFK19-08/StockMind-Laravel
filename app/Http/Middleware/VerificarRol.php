@@ -1,31 +1,31 @@
 <?php
 
-namespace App\Http\Middleware;
+namespace App\Modules\Shared\Middleware;
 
+use App\Modules\Shared\Services\Autorizacion;
 use Closure;
 use Illuminate\Http\Request;
-use App\Modules\Shared\Enums\EstadoUsuario;
 use Symfony\Component\HttpFoundation\Response;
 
 class VerificarRol
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
+    public function __construct(
+        private Autorizacion $autorizacionService
+    ) {}
+
+    // Uso: ->middleware('rol:Administrador,Cuenta-dante')
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        $usuario = $request->user();
-        // Filtro 1: ¿su cuenta está activa?
-        if (!$usuario || $usuario->estado !== EstadoUsuario::Activo->value) {
+        $usuario = $request->user(); // ya es un modelo User (lo entrega Sanctum)
+
+        if (!$usuario || !$this->autorizacionService->estaActivo($usuario)) {
             return response()->json(['message' => 'Tu cuenta no está activa.'], 403);
         }
-        // Filtro 2: ¿tiene AL MENOS UNO de los roles pedidos?
-        if (!$usuario->tieneRol(...$roles)) {
+
+        if (!$this->autorizacionService->tieneRol($usuario, $roles)) {
             return response()->json(['message' => 'No tienes permiso para esta acción.'], 403);
         }
-        // Pasó los dos filtros: sigue al controlador
+
         return $next($request);
     }
 }

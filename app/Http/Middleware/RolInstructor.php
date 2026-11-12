@@ -16,7 +16,6 @@ class RolInstructor
     public function handle(Request $request, Closure $next, string $rol): Response
     {
         $usuario = $request->user();
-        // ¿El usuario tiene el rol que pide la ruta?
         if ($usuario && $usuario->tieneRol($rol)) {
             return $next($request);
         }

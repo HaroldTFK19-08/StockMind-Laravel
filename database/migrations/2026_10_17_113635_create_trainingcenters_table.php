@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('trainingcenters', function (Blueprint $table) {
             $table->id();
             $table->string('nombre');
-            $table->string('foto_centro');
+            $table->string('foto_centro')->nullable();
             $table->string('foto_centro_public_id')->nullable();
             $table->string('regional')->default('Cauca');
             $table->string('ciudad');
