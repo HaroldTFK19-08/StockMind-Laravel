@@ -16,7 +16,7 @@ class CategoriaFacade
         return $this->categoriaService->listar();
     }
 
-    public function mostrar(int $id): Category
+    public function mostrar(int $id): array
     {
         return $this->categoriaService->mostrar($id);
     }

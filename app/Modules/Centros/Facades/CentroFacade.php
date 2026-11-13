@@ -15,7 +15,7 @@ class CentroFacade
     {
         return $this->centroService->listar();
     }
-    public function mostrar(int $id): Trainingcenter
+    public function mostrar(int $id): array
     {
         return $this->centroService->mostrar($id);
     }

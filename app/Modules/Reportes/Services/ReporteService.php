@@ -7,11 +7,13 @@ use App\Modules\Shared\Services\CloudinaryService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
+use App\Modules\Shared\Services\CacheService;
 
 class ReporteService
 {
     public function __construct(
-        private CloudinaryService $cloudinaryService
+        private CloudinaryService $cloudinaryService,
+        private CacheService $cache
     ) {}
 
     public function listar()
@@ -53,6 +55,8 @@ class ReporteService
             throw $e;
         }
 
+        $this->cache->invalidar('reportes');
+
         return $this->mostrar($reporte->id);
     }
 
@@ -91,6 +95,8 @@ class ReporteService
             $this->eliminarImagenSinInterrumpir($publicIdAnterior);
         }
 
+        $this->cache->invalidar('reportes');
+
         return $this->mostrar($id);
     }
 
@@ -99,6 +105,8 @@ class ReporteService
         $reporte = $this->mostrar($id);
         $publicId = $reporte->foto_probatorio_public_id;
         $reporte->delete();
+
+        $this->cache->invalidar('reportes');
 
         if ($publicId) {
             $this->eliminarImagenSinInterrumpir($publicId);

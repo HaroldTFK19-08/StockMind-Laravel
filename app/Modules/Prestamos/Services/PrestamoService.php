@@ -7,9 +7,14 @@ use App\Modules\Elementos\Models\Element;
 use App\Modules\Prestamos\Models\Loan;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use Illuminate\Support\Facades\DB;
+use App\Modules\Shared\Services\CacheService;
 
 class PrestamoService
 {
+    public function __construct(
+        private CacheService $cache
+    ) {}
+
     private const ESTADOS_ACTIVOS = ['activo', 'vencido'];
 
     public function listar()
@@ -46,6 +51,8 @@ class PrestamoService
             if ($this->estaActivo($estado)) {
                 $elemento->update(['estado' => 'prestado']);
             }
+
+            $this->cache->invalidar('prestamos');
 
             return $this->mostrar($prestamo->id);
         });
@@ -108,6 +115,8 @@ class PrestamoService
                 $this->actualizarEstadoElemento($elementoNuevo);
             }
 
+            $this->cache->invalidar('prestamos');
+
             return $this->mostrar($id);
         });
     }
@@ -124,6 +133,8 @@ class PrestamoService
             $estabaActivo = $this->estaActivo($prestamo->estado);
 
             $prestamo->delete();
+
+            $this->cache->invalidar('prestamos');
 
             if ($estabaActivo) {
                 $this->actualizarEstadoElemento($elemento);

@@ -7,17 +7,38 @@ use App\Modules\Shared\Services\CloudinaryService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
+use App\Modules\Shared\Services\CacheService;
 
 class CentroService
 {
     public function __construct(
-        private CloudinaryService $cloudinaryService
+        private CloudinaryService $cloudinaryService,
+        private CacheService $cache
     ) {}
+    // Listado completo de centros: sale de Redis
     public function listar()
     {
-        return Trainingcenter::latest()->get();
+        return $this->cache->recordar(
+            'centros',
+            'lista',
+            CacheService::TTL_CATALOGO,
+            fn () => Trainingcenter::latest()->get()->toArray()
+        );
     }
-    public function mostrar(int $id): Trainingcenter
+
+    // Detalle para lectura (GET): sale de Redis como array
+    public function mostrar(int $id): array
+    {
+        return $this->cache->recordar(
+            'centros',
+            "detalle:{$id}",
+            CacheService::TTL_CATALOGO,
+            fn () => $this->buscar($id)->toArray()
+        );
+    }
+
+    // Consulta directa a MySQL: la usan actualizar y eliminar
+    private function buscar(int $id): Trainingcenter
     {
         return Trainingcenter::findOrFail($id);
     }
@@ -34,6 +55,8 @@ class CentroService
 
         try {
             return DB::transaction(function () use ($datos, $imagen) {
+                $this->cache->invalidar('centros');
+
                 return Trainingcenter::create([
                     ...$datos,
                     'foto_centro' => $imagen['url'],
@@ -53,7 +76,7 @@ class CentroService
     }
     public function actualizar(int $id, array $datos): Trainingcenter
     {
-        $centro = $this->mostrar($id);
+        $centro = $this->buscar($id);
         $publicIdAnterior = $centro->foto_centro_public_id;
         $foto = $datos['foto_centro'] ?? null;
         unset($datos['foto_centro']);
@@ -89,13 +112,17 @@ class CentroService
                 report($e);
             }
         }
+        $this->cache->invalidar('centros');
+
         return $centro->refresh();
     }
     public function eliminar(int $id): void
     {
-        $centro = $this->mostrar($id);
+        $centro = $this->buscar($id);
         $publicId = $centro->foto_centro_public_id;
         $centro->delete();
+
+        $this->cache->invalidar('centros');
         if ($publicId) {
             try {
                 $this->cloudinaryService->eliminar($publicId);

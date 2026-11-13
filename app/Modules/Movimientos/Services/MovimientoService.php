@@ -5,9 +5,14 @@ namespace App\Modules\Movimientos\Services;
 use App\Modules\Movimientos\Models\Motion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use Illuminate\Support\Facades\DB;
+use App\Modules\Shared\Services\CacheService;
 
 class MovimientoService
 {
+    public function __construct(
+        private CacheService $cache
+    ) {}
+
     public function listar()
     {
         return Motion::with(['transfer', 'elements'])
@@ -30,6 +35,8 @@ class MovimientoService
             $this->validarTraslado($datos['tipo'], $datos['transfer_id'] ?? null);
             $movimiento = Motion::create($datos);
             $movimiento->elements()->sync($elementIds);
+
+            $this->cache->invalidar('movimientos');
 
             return $this->mostrar($movimiento->id);
         });
@@ -62,6 +69,8 @@ class MovimientoService
                 $movimiento->elements()->sync($elementIds);
             }
 
+            $this->cache->invalidar('movimientos');
+
             return $this->mostrar($id);
         });
     }
@@ -79,6 +88,8 @@ class MovimientoService
         }
 
         $movimiento->delete();
+
+        $this->cache->invalidar('movimientos');
     }
 
     private function validarTraslado(string $tipo, ?int $transferId): void

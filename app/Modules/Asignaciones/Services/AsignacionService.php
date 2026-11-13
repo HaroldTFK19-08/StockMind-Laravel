@@ -7,9 +7,14 @@ use App\Modules\Elementos\Models\Element;
 use App\Modules\Prestamos\Models\Loan;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use Illuminate\Support\Facades\DB;
+use App\Modules\Shared\Services\CacheService;
 
 class AsignacionService
 {
+    public function __construct(
+        private CacheService $cache
+    ) {}
+
     private const ESTADOS_ACTIVOS = ['activa', 'vencida'];
 
     public function listar()
@@ -49,6 +54,8 @@ class AsignacionService
             if ($this->estaActiva($estado)) {
                 $elemento->update(['estado' => 'asignado']);
             }
+
+            $this->cache->invalidar('asignaciones');
 
             return $this->mostrar($asignacion->id);
         });
@@ -95,6 +102,8 @@ class AsignacionService
                 $this->actualizarEstadoElemento($elementoNuevo);
             }
 
+            $this->cache->invalidar('asignaciones');
+
             return $this->mostrar($id);
         });
     }
@@ -111,6 +120,8 @@ class AsignacionService
             $estabaActiva = $this->estaActiva($asignacion->estado);
 
             $asignacion->delete();
+
+            $this->cache->invalidar('asignaciones');
 
             if ($estabaActiva) {
                 $this->actualizarEstadoElemento($elemento);

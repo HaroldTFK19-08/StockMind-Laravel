@@ -16,7 +16,7 @@ class AmbienteFacade
         return $this->ambienteService->listar();
     }
 
-    public function mostrar(int $id): Environment
+    public function mostrar(int $id): array
     {
         return $this->ambienteService->mostrar($id);
     }

@@ -16,7 +16,7 @@ class AlmacenFacade
         return $this->almacenService->listar();
     }
 
-    public function mostrar(int $id): Warehouse
+    public function mostrar(int $id): array
     {
         return $this->almacenService->mostrar($id);
     }

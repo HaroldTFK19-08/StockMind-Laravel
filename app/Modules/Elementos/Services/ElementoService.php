@@ -10,22 +10,42 @@ use App\Modules\Shared\Services\CloudinaryService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
+use App\Modules\Shared\Services\CacheService;
 
 class ElementoService
 {
     public function __construct(
-        private CloudinaryService $cloudinaryService
+        private CloudinaryService $cloudinaryService,
+        private CacheService $cache
     ) {}
 
+    // Listado paginado: las primeras páginas salen de Redis
     public function listar()
     {
-        return Element::with(['category', 'environment', 'warehouse'])
-            ->withCount(['assignments', 'loans', 'motions', 'reports'])
-            ->latest()
-            ->paginate(10);
+        return $this->cache->recordarPagina(
+            'elementos',
+            CacheService::TTL_ELEMENTOS,
+            10,
+            fn () => Element::with(['category', 'environment', 'warehouse'])
+                ->withCount(['assignments', 'loans', 'motions', 'reports'])
+                ->latest()
+        );
     }
 
-    public function mostrar(int $id): Element
+    // Detalle para lectura (GET): sale de Redis como array
+    public function mostrar(int $id): array
+    {
+        return $this->cache->recordar(
+            'elementos',
+            "detalle:{$id}",
+            CacheService::TTL_ELEMENTOS,
+            fn () => $this->buscar($id)->toArray()
+        );
+    }
+
+    // Consulta directa a MySQL: la usan crear, actualizar y eliminar
+    // para trabajar siempre con datos frescos
+    private function buscar(int $id): Element
     {
         return Element::with(['category', 'environment', 'warehouse'])
             ->withCount(['assignments', 'loans', 'motions', 'reports'])
@@ -59,12 +79,14 @@ class ElementoService
             throw $e;
         }
 
-        return $this->mostrar($elemento->id);
+        $this->cache->invalidar('elementos');
+
+        return $this->buscar($elemento->id);
     }
 
     public function actualizar(int $id, array $datos): Element
     {
-        $elemento = $this->mostrar($id);
+        $elemento = $this->buscar($id);
         $publicIdAnterior = $elemento->img_elemento_public_id;
         $foto = $datos['img_elemento'] ?? null;
         unset($datos['img_elemento']);
@@ -93,12 +115,14 @@ class ElementoService
             $this->eliminarImagenSinInterrumpir($publicIdAnterior);
         }
 
-        return $this->mostrar($id);
+        $this->cache->invalidar('elementos');
+
+        return $this->buscar($id);
     }
 
     public function eliminar(int $id): void
     {
-        $elemento = $this->mostrar($id);
+        $elemento = $this->buscar($id);
 
         if (
             $elemento->assignments()->exists()
@@ -113,6 +137,8 @@ class ElementoService
 
         $publicId = $elemento->img_elemento_public_id;
         $elemento->delete();
+
+        $this->cache->invalidar('elementos');
 
         if ($publicId) {
             $this->eliminarImagenSinInterrumpir($publicId);

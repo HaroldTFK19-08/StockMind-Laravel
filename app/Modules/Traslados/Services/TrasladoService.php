@@ -11,9 +11,14 @@ use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use App\Modules\Traslados\Models\Transfer;
 use App\Modules\Usuarios\Models\Danteaccount;
 use Illuminate\Support\Facades\DB;
+use App\Modules\Shared\Services\CacheService;
 
 class TrasladoService
 {
+    public function __construct(
+        private CacheService $cache
+    ) {}
+
     public function listar()
     {
         return Transfer::with([
@@ -67,6 +72,8 @@ class TrasladoService
             if ($estado === 'completado') {
                 $this->completarTraslado($traslado, $elementIds);
             }
+
+            $this->cache->invalidar('traslados');
 
             return $this->mostrar($traslado->id);
         });
@@ -138,6 +145,8 @@ class TrasladoService
             ]);
             $movimiento->elements()->sync($elementIds);
 
+            $this->cache->invalidar('traslados');
+
             return $this->mostrar($id);
         });
     }
@@ -157,6 +166,8 @@ class TrasladoService
 
             $traslado->motion()->first()?->delete();
             $traslado->delete();
+
+            $this->cache->invalidar('traslados');
         });
     }
 

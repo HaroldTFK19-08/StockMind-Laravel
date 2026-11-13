@@ -16,7 +16,7 @@ class SedeFacade
         return $this->sedeService->listar();
     }
 
-    public function mostrar(int $id): Headquarter
+    public function mostrar(int $id): array
     {
         return $this->sedeService->mostrar($id);
     }

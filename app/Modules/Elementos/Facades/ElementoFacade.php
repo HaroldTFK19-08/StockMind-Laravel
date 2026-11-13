@@ -16,7 +16,7 @@ class ElementoFacade
         return $this->elementoService->listar();
     }
 
-    public function mostrar(int $id): Element
+    public function mostrar(int $id): array
     {
         return $this->elementoService->mostrar($id);
     }
