@@ -7,6 +7,7 @@ use App\Modules\Reportes\Facades\ReporteFacade;
 use App\Modules\Reportes\Requests\ActualizarReporteRequest;
 use App\Modules\Reportes\Requests\RegistroReporteRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 class ReportesController extends Controller
 {
@@ -62,5 +63,15 @@ class ReportesController extends Controller
         return response()->json([
             'message' => 'Reporte eliminado correctamente.',
         ]);
+    }
+
+    public function pdfDescargar(int $id): Response
+    {
+        return $this->reporteFacade->pdfDescargar($id);
+    }
+
+    public function pdfVer(int $id): Response
+    {
+        return $this->reporteFacade->pdfVer($id);
     }
 }

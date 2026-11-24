@@ -4,6 +4,7 @@ namespace App\Modules\Reportes\Facades;
 
 use App\Modules\Reportes\Models\Report;
 use App\Modules\Reportes\Services\ReporteService;
+use Illuminate\Http\Response;
 
 class ReporteFacade
 {
@@ -34,5 +35,15 @@ class ReporteFacade
     public function eliminar(int $id): void
     {
         $this->reporteService->eliminar($id);
+    }
+
+    public function pdfDescargar(int $id): Response
+    {
+        return $this->reporteService->pdfDescargar($id);
+    }
+
+    public function pdfVer(int $id): Response
+    {
+        return $this->reporteService->pdfVer($id);
     }
 }
