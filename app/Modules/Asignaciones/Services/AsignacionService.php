@@ -166,7 +166,11 @@ class AsignacionService
             ->whereIn('estado', ['activo', 'vencido'])
             ->exists();
 
-        if (!$tieneAsignacionActiva && !$tienePrestamoActivo) {
+        if ($tieneAsignacionActiva) {
+            $elemento->update(['estado' => 'asignado']);
+        } elseif ($tienePrestamoActivo) {
+            $elemento->update(['estado' => 'prestado']);
+        } elseif ($elemento->estado === 'asignado') {
             $elemento->update(['estado' => 'disponible']);
         }
     }

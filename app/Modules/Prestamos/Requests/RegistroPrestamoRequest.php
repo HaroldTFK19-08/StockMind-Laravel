@@ -12,13 +12,15 @@ class RegistroPrestamoRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->exists('fecha_prestamo')) {
+            $this->merge(['fecha_prestamo' => now()->toDateTimeString()]);
+        }
+    }
+
     public function rules(): array
     {
-        $fechaPrestamo = $this->input(
-            'fecha_prestamo',
-            now()->toDateTimeString()
-        );
-
         return [
             'element_id' => [
                 'required',
@@ -38,7 +40,7 @@ class RegistroPrestamoRequest extends FormRequest
             'fecha_devolucion_esperada' => [
                 'required',
                 'date',
-                'after_or_equal:'.$fechaPrestamo,
+                'after_or_equal:fecha_prestamo',
             ],
             'fecha_devolucion_real' => [
                 'sometimes',

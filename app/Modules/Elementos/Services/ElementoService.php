@@ -86,8 +86,7 @@ class ElementoService
 
     public function actualizar(int $id, array $datos): Element
     {
-        $elemento = $this->buscar($id);
-        $publicIdAnterior = $elemento->img_elemento_public_id;
+        $publicIdAnterior = Element::findOrFail($id)->img_elemento_public_id;
         $foto = $datos['img_elemento'] ?? null;
         unset($datos['img_elemento']);
         $imagenNueva = null;
@@ -99,7 +98,11 @@ class ElementoService
         }
 
         try {
-            DB::transaction(function () use ($elemento, $datos) {
+            DB::transaction(function () use ($id, $datos) {
+                $elemento = Element::query()
+                    ->lockForUpdate()
+                    ->findOrFail($id);
+
                 $this->validarEstado($elemento, $datos);
                 $elemento->update($datos);
             });
@@ -156,11 +159,15 @@ class ElementoService
         $tieneAsignacionActiva = Assignment::query()
             ->where('element_id', $elemento->id)
             ->whereIn('estado', ['activa', 'vencida'])
-            ->exists();
+            ->lockForUpdate()
+            ->get(['id'])
+            ->isNotEmpty();
         $tienePrestamoActivo = Loan::query()
             ->where('element_id', $elemento->id)
             ->whereIn('estado', ['activo', 'vencido'])
-            ->exists();
+            ->lockForUpdate()
+            ->get(['id'])
+            ->isNotEmpty();
 
         if ($tieneAsignacionActiva && $estado !== 'asignado') {
             throw new ReglasNegocioExceptions(

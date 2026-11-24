@@ -16,9 +16,18 @@ class ReporteService
         private CacheService $cache
     ) {}
 
+    private const REPORT_USER_FIELDS = [
+        'id',
+        'nombre_1',
+        'nombre_2',
+        'apellido_1',
+        'apellido_2',
+        'estado',
+    ];
+
     public function listar()
     {
-        return Report::with(['apprentice.user', 'elements'])
+        return $this->withReportRelations(Report::query())
             ->withCount('elements')
             ->latest('fecha_reporte')
             ->paginate(10);
@@ -26,9 +35,18 @@ class ReporteService
 
     public function mostrar(int $id): Report
     {
-        return Report::with(['apprentice.user', 'elements'])
+        return $this->withReportRelations(Report::query())
             ->withCount('elements')
             ->findOrFail($id);
+    }
+
+    private function withReportRelations($query)
+    {
+        return $query->with([
+            'apprentice' => static fn ($q) => $q->select(['id', 'user_id', 'coursegroup_id', 'estado']),
+            'apprentice.user' => static fn ($q) => $q->select(self::REPORT_USER_FIELDS),
+            'elements',
+        ]);
     }
 
     public function crear(array $datos): Report

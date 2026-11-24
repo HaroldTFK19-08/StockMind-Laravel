@@ -13,14 +13,21 @@ class ActualizarPrestamoRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->exists('fecha_prestamo')) {
+            return;
+        }
+
+        $prestamo = Loan::find($this->route('prestamo'));
+
+        if ($prestamo?->fecha_prestamo !== null) {
+            $this->merge(['fecha_prestamo' => $prestamo->fecha_prestamo->toDateTimeString()]);
+        }
+    }
+
     public function rules(): array
     {
-        $prestamo = Loan::find($this->route('prestamo'));
-        $fechaPrestamo = $this->input(
-            'fecha_prestamo',
-            $prestamo?->fecha_prestamo?->toDateTimeString()
-        );
-
         return [
             'element_id' => [
                 'sometimes',
@@ -43,9 +50,9 @@ class ActualizarPrestamoRequest extends FormRequest
                 'sometimes',
                 'required',
                 'date',
-                ...($fechaPrestamo === null
-                    ? []
-                    : ['after_or_equal:'.$fechaPrestamo]),
+                ...($this->exists('fecha_prestamo')
+                    ? ['after_or_equal:fecha_prestamo']
+                    : []),
             ],
             'fecha_devolucion_real' => [
                 'sometimes',

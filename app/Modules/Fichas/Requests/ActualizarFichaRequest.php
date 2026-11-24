@@ -13,14 +13,22 @@ class ActualizarFichaRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->exists('fecha_inicio')) {
+            return;
+        }
+
+        $ficha = Coursegroup::find($this->route('ficha'));
+
+        if ($ficha?->fecha_inicio !== null) {
+            $this->merge(['fecha_inicio' => $ficha->fecha_inicio->toDateString()]);
+        }
+    }
+
     public function rules(): array
     {
         $id = $this->route('ficha');
-        $ficha = Coursegroup::find($id);
-        $fechaInicio = $this->input(
-            'fecha_inicio',
-            $ficha?->fecha_inicio?->toDateString()
-        );
 
         return [
             'teacher_id' => [
@@ -51,9 +59,9 @@ class ActualizarFichaRequest extends FormRequest
                 'sometimes',
                 'required',
                 'date',
-                ...($fechaInicio === null
-                    ? []
-                    : ['after_or_equal:'.$fechaInicio]),
+                ...($this->exists('fecha_inicio')
+                    ? ['after_or_equal:fecha_inicio']
+                    : []),
             ],
         ];
     }

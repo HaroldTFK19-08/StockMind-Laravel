@@ -13,14 +13,21 @@ class ActualizarTrasladoRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->exists('fecha_solicitud')) {
+            return;
+        }
+
+        $traslado = Transfer::find($this->route('traslado'));
+
+        if ($traslado?->fecha_solicitud !== null) {
+            $this->merge(['fecha_solicitud' => $traslado->fecha_solicitud->toDateTimeString()]);
+        }
+    }
+
     public function rules(): array
     {
-        $traslado = Transfer::find($this->route('traslado'));
-        $fechaSolicitud = $this->input(
-            'fecha_solicitud',
-            $traslado?->fecha_solicitud?->toDateTimeString()
-        );
-
         return [
             'ambiente_origen_id' => [
                 'sometimes',
@@ -57,9 +64,9 @@ class ActualizarTrasladoRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'date',
-                ...($fechaSolicitud === null
-                    ? []
-                    : ['after_or_equal:'.$fechaSolicitud]),
+                ...($this->exists('fecha_solicitud')
+                    ? ['after_or_equal:fecha_solicitud']
+                    : []),
             ],
             'estado' => [
                 'sometimes',

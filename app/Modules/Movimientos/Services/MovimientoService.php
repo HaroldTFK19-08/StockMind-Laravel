@@ -77,19 +77,21 @@ class MovimientoService
 
     public function eliminar(int $id): void
     {
-        $movimiento = Motion::query()
-            ->lockForUpdate()
-            ->findOrFail($id);
+        DB::transaction(function () use ($id) {
+            $movimiento = Motion::query()
+                ->lockForUpdate()
+                ->findOrFail($id);
 
-        if ($movimiento->transfer_id !== null) {
-            throw new ReglasNegocioExceptions(
-                'Los movimientos asociados a traslados deben gestionarse desde el módulo de traslados.'
-            );
-        }
+            if ($movimiento->transfer_id !== null) {
+                throw new ReglasNegocioExceptions(
+                    'Los movimientos asociados a traslados deben gestionarse desde el módulo de traslados.'
+                );
+            }
 
-        $movimiento->delete();
+            $movimiento->delete();
 
-        $this->cache->invalidar('movimientos');
+            $this->cache->invalidar('movimientos');
+        });
     }
 
     private function validarTraslado(string $tipo, ?int $transferId): void
