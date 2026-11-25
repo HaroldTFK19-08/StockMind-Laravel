@@ -14,11 +14,8 @@ class ReporteService
 {
     public function __construct(
         private CloudinaryService $cloudinaryService,
-<<<<<<< HEAD
-        private CacheService $cache
-=======
+        private CacheService $cache,
         private PDFService $pdfService
->>>>>>> kevin
     ) {}
 
     private const REPORT_USER_FIELDS = [
@@ -48,8 +45,8 @@ class ReporteService
     private function withReportRelations($query)
     {
         return $query->with([
-            'apprentice' => static fn ($q) => $q->select(['id', 'user_id', 'coursegroup_id', 'estado']),
-            'apprentice.user' => static fn ($q) => $q->select(self::REPORT_USER_FIELDS),
+            'apprentice' => static fn($q) => $q->select(['id', 'user_id', 'coursegroup_id', 'estado']),
+            'apprentice.user' => static fn($q) => $q->select(self::REPORT_USER_FIELDS),
             'elements',
         ]);
     }
