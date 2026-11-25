@@ -44,15 +44,22 @@ class UserController extends Controller
         ActualizarUsuarioRequest $request,
         int $id
     ): JsonResponse {
-        $usuario = $this->usuarioFacade->actualizar(
+        $resultado = $this->usuarioFacade->actualizar(
             $id,
             $request->validated()
         );
 
-        return response()->json([
+        $respuesta = [
             'message' => 'Usuario actualizado correctamente.',
-            'data' => $usuario,
-        ]);
+            'data' => $resultado['usuario'],
+        ];
+
+        if ($resultado['token'] !== null) {
+            $respuesta['message'] = 'Rol asignado y cuenta activada. Entrega este token al usuario.';
+            $respuesta['token'] = $resultado['token'];
+        }
+
+        return response()->json($respuesta);
     }
 
     public function destroy(int $id): JsonResponse

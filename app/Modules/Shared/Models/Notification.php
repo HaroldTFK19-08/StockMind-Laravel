@@ -2,28 +2,32 @@
 
 namespace App\Modules\Shared\Models;
 
+use App\Modules\Usuarios\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Modules\Usuarios\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
     use HasFactory;
+
     protected $table = 'notifications';
+
     protected $fillable = [
-        'usuario_id',
+        'user_id',
         'titulo',
-        'tipo',
         'mensaje',
+        'tipo',
         'leida',
+        'data',
     ];
-    protected function casts(): array
-    {
-        return [
-            'leida' => 'boolean',
-        ];
-    }
-    public function user()
+
+    protected $casts = [
+        'leida' => 'boolean',
+        'data' => 'array',
+    ];
+
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }

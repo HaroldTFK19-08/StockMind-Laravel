@@ -7,7 +7,9 @@ use App\Modules\Ambientes\Models\Environment;
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Movimientos\Models\Motion;
 use App\Modules\Prestamos\Models\Loan;
+use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
+use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Traslados\Models\Transfer;
 use App\Modules\Usuarios\Models\Danteaccount;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +18,8 @@ use App\Modules\Shared\Services\CacheService;
 class TrasladoService
 {
     public function __construct(
-        private CacheService $cache
+        private CacheService $cache,
+        private NotificacionService $notificacionService
     ) {}
 
     public function listar()
@@ -262,12 +265,24 @@ class TrasladoService
 
         $fechaFin = now()->toDateString();
         $cuenta->update(['fecha_fin' => $fechaFin]);
-        Danteaccount::create([
+        $cuentaNueva = Danteaccount::create([
             'user_id' => $cuenta->user_id,
             'environment_id' => $destinoId,
             'fecha_inicio' => $fechaFin,
             'fecha_fin' => null,
         ]);
+
+        $this->notificacionService->aUsuario(
+            $cuenta->user_id,
+            'Te asignaron un ambiente',
+            "Ahora estás a cargo del ambiente {$ambienteDestino->nombre}.",
+            TipoNotificacion::AmbienteAsignado,
+            [
+                'danteaccount_id' => $cuentaNueva->id,
+                'ambiente_id' => $destinoId,
+                'traslado_id' => $traslado->id,
+            ]
+        );
     }
 
     private function validarCuentaDante(int $cuentaId, int $origenId): void

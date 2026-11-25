@@ -2,19 +2,12 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
-
-class RolAdmin
+class RolAdmin extends RolBase
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
-    public function handle(Request $request, Closure $next): Response
+    protected function roles(): array
     {
-        return $next($request);
+        // El catálogo no incluye "Administrador" (según lo indicado),
+        // pero el filtro queda listo si ese rol llega a crearse.
+        return ['Administrador'];
     }
 }

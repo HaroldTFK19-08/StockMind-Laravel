@@ -19,8 +19,9 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): JsonResponse
     {
         $usuario = $this->authFacade->registrar($request->validated());
+
         return response()->json([
-            'mensaje' => 'Registro exitoso. Un administrador debe aprobar tu cuenta.',
+            'mensaje' => 'Registro exitoso. Espera a que un administrador te asigne un rol.',
             'usuario' => $usuario,
         ], 201);
     }

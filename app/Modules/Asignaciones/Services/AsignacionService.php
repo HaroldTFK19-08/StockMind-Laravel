@@ -5,14 +5,17 @@ namespace App\Modules\Asignaciones\Services;
 use App\Modules\Asignaciones\Models\Assignment;
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Prestamos\Models\Loan;
+use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use Illuminate\Support\Facades\DB;
 use App\Modules\Shared\Services\CacheService;
+use App\Modules\Shared\Services\NotificacionService;
 
 class AsignacionService
 {
     public function __construct(
-        private CacheService $cache
+        private CacheService $cache,
+        private NotificacionService $notificacionService
     ) {}
 
     private const ESTADOS_ACTIVOS = ['activa', 'vencida'];
@@ -57,7 +60,15 @@ class AsignacionService
 
             $this->cache->invalidar('asignaciones');
 
-            return $this->mostrar($asignacion->id);
+            $asignacion = $this->mostrar($asignacion->id);
+            $this->notificarAlAprendiz(
+                $asignacion,
+                'Tienes una nueva asignación',
+                "Se te asignó el elemento {$asignacion->element?->nombre} con estado {$asignacion->estado}.",
+                TipoNotificacion::AsignacionCreada
+            );
+
+            return $asignacion;
         });
     }
 
@@ -68,6 +79,7 @@ class AsignacionService
                 ->lockForUpdate()
                 ->findOrFail($id);
             $elementoAnteriorId = $asignacion->element_id;
+            $estadoAnterior = $asignacion->estado;
             $elementoNuevoId = $datos['element_id'] ?? $elementoAnteriorId;
             $elementos = Element::query()
                 ->whereIn('id', array_unique([$elementoAnteriorId, $elementoNuevoId]))
@@ -104,7 +116,21 @@ class AsignacionService
 
             $this->cache->invalidar('asignaciones');
 
-            return $this->mostrar($id);
+            $asignacionActualizada = $this->mostrar($id);
+
+            if (
+                $estadoAnterior !== $asignacionActualizada->estado
+                || $elementoAnteriorId !== $elementoNuevoId
+            ) {
+                $this->notificarAlAprendiz(
+                    $asignacionActualizada,
+                    'Tu asignación fue actualizada',
+                    "Tu asignación del elemento {$asignacionActualizada->element?->nombre} ahora está {$asignacionActualizada->estado}.",
+                    TipoNotificacion::AsignacionActualizada
+                );
+            }
+
+            return $asignacionActualizada;
         });
     }
 
@@ -114,6 +140,7 @@ class AsignacionService
             $asignacion = Assignment::query()
                 ->lockForUpdate()
                 ->findOrFail($id);
+            $datosAsignacion = $this->mostrar($asignacion->id);
             $elemento = Element::query()
                 ->lockForUpdate()
                 ->findOrFail($asignacion->element_id);
@@ -126,6 +153,13 @@ class AsignacionService
             if ($estabaActiva) {
                 $this->actualizarEstadoElemento($elemento);
             }
+
+            $this->notificarAlAprendiz(
+                $datosAsignacion,
+                'Tu asignación fue cancelada',
+                "La asignación del elemento {$datosAsignacion->element?->nombre} fue eliminada.",
+                TipoNotificacion::AsignacionActualizada
+            );
         });
     }
 
@@ -173,6 +207,34 @@ class AsignacionService
         } elseif ($elemento->estado === 'asignado') {
             $elemento->update(['estado' => 'disponible']);
         }
+    }
+
+    /**
+     * Notifica al aprendiz dueño de la asignación (ASMR-34 y ASMR-36).
+     */
+    private function notificarAlAprendiz(
+        Assignment $asignacion,
+        string $titulo,
+        string $mensaje,
+        TipoNotificacion $tipo
+    ): void {
+        $usuarioId = $asignacion->apprentice?->user_id;
+
+        if ($usuarioId === null) {
+            return;
+        }
+
+        $this->notificacionService->aUsuario(
+            $usuarioId,
+            $titulo,
+            $mensaje,
+            $tipo,
+            [
+                'asignacion_id' => $asignacion->id,
+                'elemento_id' => $asignacion->element_id,
+                'estado' => $asignacion->estado,
+            ]
+        );
     }
 
     private function estaActiva(string $estado): bool

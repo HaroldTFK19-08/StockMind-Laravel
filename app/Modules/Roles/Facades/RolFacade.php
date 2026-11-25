@@ -19,6 +19,14 @@ class RolFacade
     {
         return $this->rolService->mostrar($id);
     }
+
+    /**
+     * @return array<int, string>
+     */
+    public function filtrarParaAsignacion(array $roleIds): array
+    {
+        return $this->rolService->filtrarParaAsignacion($roleIds);
+    }
     public function crear(array $datos): Rol
     {
         return $this->rolService->crear($datos);

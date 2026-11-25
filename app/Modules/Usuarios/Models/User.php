@@ -5,6 +5,7 @@ namespace App\Modules\Usuarios\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Modules\Roles\Models\Rol;
+use App\Modules\Shared\Models\Notification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -65,6 +66,16 @@ class User extends Authenticatable
         return $this->belongsToMany(Rol::class, 'user_rol', 'users_id', 'rol_id')
             ->withTimestamps();
     }
+
+    /**
+     * Verifica si el usuario tiene alguno de los roles indicados.
+     */
+    public function tieneRol(string|array $roles): bool
+    {
+        return $this->roles()
+            ->whereIn('rol', is_array($roles) ? $roles : [$roles])
+            ->exists();
+    }
     public function apprentice(): HasOne
     {
         return $this->hasOne(Apprentice::class, 'user_id');
@@ -76,5 +87,10 @@ class User extends Authenticatable
     public function danteaccounts(): HasMany
     {
         return $this->hasMany(Danteaccount::class, 'user_id');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'user_id');
     }
 }

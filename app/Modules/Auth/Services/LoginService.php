@@ -11,6 +11,10 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class LoginService
 {
+    public function __construct(
+        private TokenService $tokenService
+    ) {}
+
     public function login(array $credenciales): array
     {
         // 1. Buscar al usuario y verificar la contraseña
@@ -26,7 +30,7 @@ class LoginService
         $this->validarEstado($usuario);
 
         // 3. Crear el token (reemplaza la sesión)
-        $token = $usuario->createToken('stockmind')->plainTextToken;
+        $token = $this->tokenService->emitir($usuario);
 
         return [
             'mensaje' => 'Inicio de sesión exitoso.',

@@ -26,7 +26,10 @@ class UsuarioFacade
         return $this->usuarioService->crear($datos);
     }
 
-    public function actualizar(int $id, array $datos): User
+    /**
+     * @return array{usuario: User, token: string|null}
+     */
+    public function actualizar(int $id, array $datos): array
     {
         return $this->usuarioService->actualizar($id, $datos);
     }

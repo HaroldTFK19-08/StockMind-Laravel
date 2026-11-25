@@ -5,8 +5,10 @@ namespace App\Modules\Elementos\Services;
 use App\Modules\Asignaciones\Models\Assignment;
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Prestamos\Models\Loan;
+use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use App\Modules\Shared\Services\CloudinaryService;
+use App\Modules\Shared\Services\NotificacionService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -16,7 +18,8 @@ class ElementoService
 {
     public function __construct(
         private CloudinaryService $cloudinaryService,
-        private CacheService $cache
+        private CacheService $cache,
+        private NotificacionService $notificacionService
     ) {}
 
     // Listado paginado: las primeras páginas salen de Redis
@@ -79,6 +82,12 @@ class ElementoService
             throw $e;
         }
 
+        $this->notificarCambioStock(
+            $elemento,
+            'Nuevo elemento en el inventario',
+            "Se registró el elemento {$elemento->nombre} con estado {$elemento->estado}."
+        );
+
         $this->cache->invalidar('elementos');
 
         return $this->buscar($elemento->id);
@@ -86,7 +95,9 @@ class ElementoService
 
     public function actualizar(int $id, array $datos): Element
     {
-        $publicIdAnterior = Element::findOrFail($id)->img_elemento_public_id;
+        $elementoAnterior = Element::findOrFail($id);
+        $publicIdAnterior = $elementoAnterior->img_elemento_public_id;
+        $estadoAnterior = $elementoAnterior->estado;
         $foto = $datos['img_elemento'] ?? null;
         unset($datos['img_elemento']);
         $imagenNueva = null;
@@ -112,6 +123,16 @@ class ElementoService
             }
 
             throw $e;
+        }
+
+        $elementoActualizado = $this->buscar($id);
+
+        if (($datos['estado'] ?? $estadoAnterior) !== $estadoAnterior) {
+            $this->notificarCambioStock(
+                $elementoActualizado,
+                'Actualización de stock',
+                "El elemento {$elementoActualizado->nombre} ahora está {$elementoActualizado->estado}."
+            );
         }
 
         if ($imagenNueva !== null && $publicIdAnterior) {
@@ -192,6 +213,37 @@ class ElementoService
                 'El estado prestado debe gestionarse desde el módulo de préstamos.'
             );
         }
+    }
+
+    /**
+     * Avisa a los aprendices y al cuenta-dante del ambiente cuando cambia el
+     * inventario (ASMR-37).
+     */
+    private function notificarCambioStock(
+        Element $elemento,
+        string $titulo,
+        string $mensaje
+    ): void {
+        $destinatarios = $this->notificacionService->idsConRol('Aprendiz');
+
+        if ($elemento->environment_id !== null) {
+            $destinatarios = array_merge(
+                $destinatarios,
+                $this->notificacionService->idsCuentadantesDeAmbiente($elemento->environment_id)
+            );
+        }
+
+        $this->notificacionService->aUsuarios(
+            $destinatarios,
+            $titulo,
+            $mensaje,
+            TipoNotificacion::StockActualizado,
+            [
+                'elemento_id' => $elemento->id,
+                'ambiente_id' => $elemento->environment_id,
+                'estado' => $elemento->estado,
+            ]
+        );
     }
 
     private function eliminarImagenSinInterrumpir(string $publicId): void
