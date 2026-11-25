@@ -7,6 +7,7 @@ use App\Modules\Elementos\Facades\ElementoFacade;
 use App\Modules\Elementos\Requests\ActualizarElementoRequest;
 use App\Modules\Elementos\Requests\RegistroElementoRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 class ElementosController extends Controller
 {
@@ -62,5 +63,15 @@ class ElementosController extends Controller
         return response()->json([
             'message' => 'Elemento eliminado correctamente.',
         ]);
+    }
+
+    public function pdfVer(): Response
+    {
+        return $this->elementoFacade->pdfVer();
+    }
+
+    public function pdfDescargar(): Response
+    {
+        return $this->elementoFacade->pdfDescargar();
     }
 }

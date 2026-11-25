@@ -10,12 +10,16 @@ use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use Illuminate\Support\Facades\DB;
 use App\Modules\Shared\Services\CacheService;
 use App\Modules\Shared\Services\NotificacionService;
+use App\Modules\Shared\Services\PDFService;
+use App\Modules\Shared\Services\ResponsablesElementoService;
 
 class AsignacionService
 {
     public function __construct(
         private CacheService $cache,
-        private NotificacionService $notificacionService
+        private NotificacionService $notificacionService,
+        private PDFService $pdfService,
+        private ResponsablesElementoService $responsablesElementoService
     ) {}
 
     private const ESTADOS_ACTIVOS = ['activa', 'vencida'];
@@ -207,6 +211,71 @@ class AsignacionService
         } elseif ($elemento->estado === 'asignado') {
             $elemento->update(['estado' => 'disponible']);
         }
+    }
+
+    public function pdfVer()
+    {
+        return $this->pdfService->ver(
+            'asignaciones.pdf',
+            $this->datosParaPdf(),
+            'asignaciones.pdf'
+        );
+    }
+
+    public function pdfDescargar()
+    {
+        return $this->pdfService->descargar(
+            'asignaciones.pdf',
+            $this->datosParaPdf(),
+            'asignaciones.pdf'
+        );
+    }
+
+    /**
+     * @return array{asignaciones: array<int, array<string, mixed>>, total: int, generado_en: \Illuminate\Support\Carbon}
+     */
+    private function datosParaPdf(): array
+    {
+        $asignaciones = Assignment::query()
+            ->with([
+                'element' => static fn ($query) => $query
+                    ->with(ResponsablesElementoService::relacionesParaPdf()),
+                'apprentice.user',
+                'teacher.user',
+            ])
+            ->latest('fecha_asignacion')
+            ->get();
+
+        $filas = $asignaciones->map(function (Assignment $asignacion) {
+            $elemento = $asignacion->element;
+            $ficha = $elemento !== null
+                ? $this->responsablesElementoService->ficha($elemento)
+                : null;
+
+            return [
+                'id' => $asignacion->id,
+                'codigo' => $elemento?->codigo_inventario ?? 'N/D',
+                'elemento' => $elemento?->nombre ?? 'Elemento no disponible',
+                'aprendiz' => ResponsablesElementoService::nombreCompleto($asignacion->apprentice?->user)
+                    ?? 'Sin aprendiz registrado',
+                'instructor' => ResponsablesElementoService::nombreCompleto($asignacion->teacher?->user)
+                    ?? 'Sin instructor registrado',
+                'fecha_asignacion' => $asignacion->fecha_asignacion,
+                'fecha_devolucion_esperada' => $asignacion->fecha_devolucion_esperada,
+                'fecha_devolucion_real' => $asignacion->fecha_devolucion_real,
+                'estado' => $asignacion->estado,
+                'observaciones' => $asignacion->observaciones,
+                'responsable' => $ficha['responsable'] ?? 'Sin responsable registrado',
+                'tipo_responsable' => $ficha['tipo_responsable'] ?? 'Sin asignar',
+                'resumen_uso' => $ficha['resumen_uso'] ?? 'Sin información de uso',
+            ];
+        })->all();
+
+        return [
+            'asignaciones' => $filas,
+            'total' => $asignaciones->count(),
+            'generado_en' => now(),
+        ];
     }
 
     /**

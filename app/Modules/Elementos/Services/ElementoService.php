@@ -9,6 +9,8 @@ use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use App\Modules\Shared\Services\CloudinaryService;
 use App\Modules\Shared\Services\NotificacionService;
+use App\Modules\Shared\Services\PDFService;
+use App\Modules\Shared\Services\ResponsablesElementoService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -19,7 +21,9 @@ class ElementoService
     public function __construct(
         private CloudinaryService $cloudinaryService,
         private CacheService $cache,
-        private NotificacionService $notificacionService
+        private NotificacionService $notificacionService,
+        private PDFService $pdfService,
+        private ResponsablesElementoService $responsablesElementoService
     ) {}
 
     // Listado paginado: las primeras páginas salen de Redis
@@ -244,6 +248,41 @@ class ElementoService
                 'estado' => $elemento->estado,
             ]
         );
+    }
+
+    public function pdfVer()
+    {
+        return $this->pdfService->ver(
+            'elementos.pdf',
+            $this->datosParaPdf(),
+            'inventario.pdf'
+        );
+    }
+
+    public function pdfDescargar()
+    {
+        return $this->pdfService->descargar(
+            'elementos.pdf',
+            $this->datosParaPdf(),
+            'inventario.pdf'
+        );
+    }
+
+    /**
+     * @return array{elementos: array<int, array<string, mixed>>, total: int, generado_en: \Illuminate\Support\Carbon}
+     */
+    private function datosParaPdf(): array
+    {
+        $elementos = Element::query()
+            ->with(ResponsablesElementoService::relacionesParaPdf())
+            ->orderBy('codigo_inventario')
+            ->get();
+
+        return [
+            'elementos' => $this->responsablesElementoService->preparar($elementos),
+            'total' => $elementos->count(),
+            'generado_en' => now(),
+        ];
     }
 
     private function eliminarImagenSinInterrumpir(string $publicId): void

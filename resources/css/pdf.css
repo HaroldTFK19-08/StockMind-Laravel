@@ -1,0 +1,97 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+@source "../views/pdfs/**/*.blade.php";
+@source "../views/reportes/*.blade.php";
+@source "../views/elementos/*.blade.php";
+@source "../views/asignaciones/*.blade.php";
+
+/*
+ * Clases compiladas con Tailwind para DomPDF.
+ * DomPDF no interpreta clases utilitarias en vivo: este archivo se compila a
+ * CSS plano y se incrusta en las vistas PDF desde public/css/pdf.css.
+ */
+@layer components {
+    .pdf-body {
+        @apply bg-white text-sm-tinta;
+        font-family: "DejaVu Sans", sans-serif;
+        font-size: 10px;
+    }
+
+    .pdf-header {
+        @apply mb-3 border-b-2 border-sm-bosque pb-2;
+        border-bottom-style: solid;
+    }
+
+    .pdf-title {
+        @apply m-0 text-xl font-bold text-sm-bosque;
+        line-height: 1.75rem;
+    }
+
+    .pdf-subtitle {
+        @apply text-sm-gris;
+    }
+
+    .pdf-section {
+        @apply mb-1 mt-4 text-[13px] font-bold text-sm-verde-oscuro;
+    }
+
+    .pdf-meta,
+    .pdf-table {
+        @apply w-full border-collapse;
+    }
+
+    .pdf-meta td {
+        @apply border border-sm-linea px-2 py-1 align-top text-left;
+        border-style: solid;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .pdf-table th {
+        @apply border border-sm-bosque bg-sm-verde px-1 py-1 text-left text-[9px] font-bold text-white;
+        border-style: solid;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .pdf-table td {
+        @apply border border-sm-linea px-1 py-1 align-top text-left;
+        border-style: solid;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .pdf-table tbody tr:nth-child(even) td {
+        @apply bg-sm-papel;
+    }
+
+    .pdf-label {
+        @apply w-1/5 bg-sm-hoja font-bold;
+    }
+
+    .pdf-small {
+        @apply text-[8px] text-sm-gris;
+    }
+
+    .pdf-footer {
+        @apply mt-3 border-t border-sm-linea pt-2 text-[8px] text-sm-gris;
+        border-top-style: solid;
+    }
+
+    .pdf-photo {
+        max-width: 100%;
+        max-height: 280px;
+        margin-top: 8px;
+    }
+
+    .pdf-nowrap {
+        white-space: nowrap;
+    }
+}

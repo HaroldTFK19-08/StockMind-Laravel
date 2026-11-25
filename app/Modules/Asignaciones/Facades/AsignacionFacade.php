@@ -4,6 +4,7 @@ namespace App\Modules\Asignaciones\Facades;
 
 use App\Modules\Asignaciones\Models\Assignment;
 use App\Modules\Asignaciones\Services\AsignacionService;
+use Illuminate\Http\Response;
 
 class AsignacionFacade
 {
@@ -34,5 +35,15 @@ class AsignacionFacade
     public function eliminar(int $id): void
     {
         $this->asignacionService->eliminar($id);
+    }
+
+    public function pdfVer(): Response
+    {
+        return $this->asignacionService->pdfVer();
+    }
+
+    public function pdfDescargar(): Response
+    {
+        return $this->asignacionService->pdfDescargar();
     }
 }

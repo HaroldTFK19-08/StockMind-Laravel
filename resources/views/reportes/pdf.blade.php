@@ -3,80 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <title>Reporte {{ $reporte->id }}</title>
-    <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #222; }
-        h1 { margin-bottom: 4px; }
-        .header { border-bottom: 2px solid #1f2937; margin-bottom: 20px; padding-bottom: 10px; }
-        .meta { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .meta td { padding: 7px; border: 1px solid #d1d5db; vertical-align: top; }
-        .label { width: 24%; background: #f3f4f6; font-weight: bold; }
-        .elements { width: 100%; border-collapse: collapse; margin-top: 8px; }
-        .elements th, .elements td { border: 1px solid #d1d5db; padding: 7px; text-align: left; }
-        .elements th { background: #1f2937; color: white; }
-        .photo { max-width: 100%; max-height: 300px; margin-top: 10px; }
-    </style>
+    @include('pdfs.partials.estilos')
 </head>
-<body>
-    <div class="header">
-        <h1>Reporte #{{ $reporte->id }}</h1>
-        <div>StockMind - Registro de novedad</div>
+<body class="pdf-body">
+    <div class="pdf-header">
+        <h1 class="pdf-title">Reporte #{{ $reporte->id }}</h1>
+        <div class="pdf-subtitle">StockMind - Registro de novedad</div>
+        <div class="pdf-small">Generado: {{ $generado_en?->format('d/m/Y H:i') }}</div>
     </div>
 
-    <table class="meta">
+    <table class="pdf-meta">
         <tr>
-            <td class="label">Aprendiz</td>
+            <td class="pdf-label">Aprendiz</td>
             <td>
                 @if($reporte->apprentice && $reporte->apprentice->user)
-                    {{ $reporte->apprentice->user->nombre_1 }}
-                    {{ $reporte->apprentice->user->nombre_2 }}
-                    {{ $reporte->apprentice->user->apellido_1 }}
-                    {{ $reporte->apprentice->user->apellido_2 }}
+                    {{ trim(collect([
+                        $reporte->apprentice->user->nombre_1,
+                        $reporte->apprentice->user->nombre_2,
+                        $reporte->apprentice->user->apellido_1,
+                        $reporte->apprentice->user->apellido_2,
+                    ])->filter()->implode(' ')) ?: $reporte->apprentice->user->email }}
                 @else
                     No disponible
                 @endif
             </td>
         </tr>
         <tr>
-            <td class="label">Tipo</td>
+            <td class="pdf-label">Tipo</td>
             <td>{{ ucfirst(str_replace('_', ' ', $reporte->tipo)) }}</td>
         </tr>
         <tr>
-            <td class="label">Estado</td>
+            <td class="pdf-label">Estado</td>
             <td>{{ ucfirst(str_replace('_', ' ', $reporte->estado)) }}</td>
         </tr>
         <tr>
-            <td class="label">Fecha</td>
+            <td class="pdf-label">Fecha del reporte</td>
             <td>{{ $reporte->fecha_reporte?->format('d/m/Y H:i') }}</td>
         </tr>
         <tr>
-            <td class="label">Descripción</td>
-            <td>{{ $reporte->descripcion }}</td>
+            <td class="pdf-label">Descripción</td>
+            <td>{!! nl2br(e($reporte->descripcion)) !!}</td>
         </tr>
     </table>
 
-    <h2>Elementos asociados</h2>
-    <table class="elements">
+    <h2 class="pdf-section">Elementos asociados, responsables y uso</h2>
+    <table class="pdf-table">
         <thead>
             <tr>
                 <th>Código</th>
-                <th>Nombre</th>
+                <th>Elemento</th>
+                <th>Ubicación</th>
                 <th>Estado</th>
+                <th>Responsable</th>
+                <th>Uso</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($reporte->elements as $elemento)
+            @forelse($elementos ?? [] as $elemento)
                 <tr>
-                    <td>{{ $elemento->codigo_inventario }}</td>
-                    <td>{{ $elemento->nombre }}</td>
-                    <td>{{ ucfirst(str_replace('_', ' ', $elemento->estado)) }}</td>
+                    <td class="pdf-nowrap">{{ $elemento['codigo'] }}</td>
+                    <td>
+                        {{ $elemento['nombre'] }}
+                        <div class="pdf-small">
+                            {{ $elemento['categoria'] }}
+                            @if($elemento['serial']) · Serial {{ $elemento['serial'] }} @endif
+                            @if($elemento['marca']) · {{ $elemento['marca'] }} @endif
+                        </div>
+                    </td>
+                    <td>{{ $elemento['ubicacion'] }}</td>
+                    <td>
+                        {{ ucfirst(str_replace('_', ' ', (string) $elemento['estado'])) }}
+                        @if($elemento['condicion'])
+                            <div class="pdf-small">Condición: {{ $elemento['condicion'] }}</div>
+                        @endif
+                    </td>
+                    <td>
+                        {{ $elemento['responsable'] }}
+                        <div class="pdf-small">{{ $elemento['tipo_responsable'] }}</div>
+                    </td>
+                    <td>
+                        {!! nl2br(e($elemento['resumen_uso'])) !!}
+                        @if($elemento['uso']['ultima_asignacion'])
+                            <div class="pdf-small">Última asignación: {{ $elemento['uso']['ultima_asignacion'] }}</div>
+                        @endif
+                        @if($elemento['uso']['ultimo_reporte'])
+                            <div class="pdf-small">Último reporte: {{ $elemento['uso']['ultimo_reporte'] }}</div>
+                        @endif
+                    </td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="6">Este reporte no tiene elementos asociados.</td>
+                </tr>
+            @endforelse
         </tbody>
     </table>
 
     @if($reporte->foto_probatorio)
-        <h2>Foto probatoria</h2>
-        <img class="photo" src="{{ $reporte->foto_probatorio }}" alt="Foto probatoria">
+        <h2 class="pdf-section">Foto probatoria</h2>
+        <img class="pdf-photo" src="{{ $reporte->foto_probatorio }}" alt="Foto probatoria">
     @endif
+
+    <div class="pdf-footer">
+        Responsable actual por prioridad: aprendiz con asignación activa, instructor con préstamo activo,
+        cuenta-dante del ambiente, instructor responsable del ambiente o almacén.
+    </div>
 </body>
 </html>

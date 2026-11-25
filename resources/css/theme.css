@@ -1,0 +1,18 @@
+/* Paleta del panel StockMind (misma que usa el front-end). */
+@theme inline {
+    --spacing: 0.25rem;
+    --color-white: #ffffff;
+    --font-weight-bold: 700;
+    --text-xl: 1.25rem;
+    --text-xl--line-height: 1.75rem;
+
+    --color-sm-verde: #39a900;
+    --color-sm-verde-oscuro: #2b8000;
+    --color-sm-bosque: #17330f;
+    --color-sm-hoja: #eaf4e2;
+    --color-sm-papel: #f4f6f1;
+    --color-sm-tinta: #1c261b;
+    --color-sm-gris: #5f6b5c;
+    --color-sm-linea: #dde3d8;
+    --color-sm-rojo: #b42318;
+}

@@ -46,4 +46,14 @@ class ReporteFacade
     {
         return $this->reporteService->pdfVer($id);
     }
+
+    public function pdfListadoVer(): Response
+    {
+        return $this->reporteService->pdfListadoVer();
+    }
+
+    public function pdfListadoDescargar(): Response
+    {
+        return $this->reporteService->pdfListadoDescargar();
+    }
 }

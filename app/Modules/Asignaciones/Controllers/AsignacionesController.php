@@ -7,6 +7,7 @@ use App\Modules\Asignaciones\Facades\AsignacionFacade;
 use App\Modules\Asignaciones\Requests\ActualizarAsignacionRequest;
 use App\Modules\Asignaciones\Requests\RegistroAsignacionRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 class AsignacionesController extends Controller
 {
@@ -62,5 +63,15 @@ class AsignacionesController extends Controller
         return response()->json([
             'message' => 'Asignación eliminada correctamente.',
         ]);
+    }
+
+    public function pdfVer(): Response
+    {
+        return $this->asignacionFacade->pdfVer();
+    }
+
+    public function pdfDescargar(): Response
+    {
+        return $this->asignacionFacade->pdfDescargar();
     }
 }

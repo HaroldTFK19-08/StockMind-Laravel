@@ -4,6 +4,7 @@ namespace App\Modules\Elementos\Facades;
 
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Elementos\Services\ElementoService;
+use Illuminate\Http\Response;
 
 class ElementoFacade
 {
@@ -34,5 +35,15 @@ class ElementoFacade
     public function eliminar(int $id): void
     {
         $this->elementoService->eliminar($id);
+    }
+
+    public function pdfVer(): Response
+    {
+        return $this->elementoService->pdfVer();
+    }
+
+    public function pdfDescargar(): Response
+    {
+        return $this->elementoService->pdfDescargar();
     }
 }

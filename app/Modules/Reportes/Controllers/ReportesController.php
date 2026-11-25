@@ -74,4 +74,14 @@ class ReportesController extends Controller
     {
         return $this->reporteFacade->pdfVer($id);
     }
+
+    public function pdfListadoVer(): Response
+    {
+        return $this->reporteFacade->pdfListadoVer();
+    }
+
+    public function pdfListadoDescargar(): Response
+    {
+        return $this->reporteFacade->pdfListadoDescargar();
+    }
 }

@@ -8,6 +8,7 @@ use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Services\CloudinaryService;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Shared\Services\PDFService;
+use App\Modules\Shared\Services\ResponsablesElementoService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -19,7 +20,8 @@ class ReporteService
         private CloudinaryService $cloudinaryService,
         private CacheService $cache,
         private PDFService $pdfService,
-        private NotificacionService $notificacionService
+        private NotificacionService $notificacionService,
+        private ResponsablesElementoService $responsablesElementoService
     ) {}
 
     private const REPORT_USER_FIELDS = [
@@ -28,6 +30,7 @@ class ReporteService
         'nombre_2',
         'apellido_1',
         'apellido_2',
+        'email',
         'estado',
     ];
 
@@ -160,24 +163,117 @@ class ReporteService
 
     public function pdfDescargar(int $id)
     {
-        $reporte = $this->mostrar($id);
+        $datos = $this->datosReporteParaPdf($id);
 
         return $this->pdfService->descargar(
             'reportes.pdf',
-            ['reporte' => $reporte],
-            'reporte-' . $reporte->id . '.pdf'
+            $datos,
+            'reporte-' . $id . '.pdf'
         );
     }
 
     public function pdfVer(int $id)
     {
-        $reporte = $this->mostrar($id);
+        $datos = $this->datosReporteParaPdf($id);
 
         return $this->pdfService->ver(
             'reportes.pdf',
-            ['reporte' => $reporte],
-            'reporte-' . $reporte->id . '.pdf'
+            $datos,
+            'reporte-' . $id . '.pdf'
         );
+    }
+
+    public function pdfListadoDescargar()
+    {
+        return $this->pdfService->descargar(
+            'reportes.listado-pdf',
+            $this->datosListadoParaPdf(),
+            'reportes.pdf'
+        );
+    }
+
+    public function pdfListadoVer()
+    {
+        return $this->pdfService->ver(
+            'reportes.listado-pdf',
+            $this->datosListadoParaPdf(),
+            'reportes.pdf'
+        );
+    }
+
+    /**
+     * @return array{reporte: Report, elementos: array<int, array<string, mixed>>, generado_en: \Illuminate\Support\Carbon}
+     */
+    private function datosReporteParaPdf(int $id): array
+    {
+        $reporte = Report::query()
+            ->with($this->relacionesParaPdf())
+            ->findOrFail($id);
+
+        return [
+            'reporte' => $reporte,
+            'elementos' => $this->responsablesElementoService->preparar($reporte->elements),
+            'generado_en' => now(),
+        ];
+    }
+
+    /**
+     * @return array{reportes: array<int, array<string, mixed>>, total: int, generado_en: \Illuminate\Support\Carbon}
+     */
+    private function datosListadoParaPdf(): array
+    {
+        $reportes = Report::query()
+            ->with($this->relacionesParaPdf())
+            ->latest('fecha_reporte')
+            ->get();
+
+        $filas = $reportes->map(function (Report $reporte) {
+            $fichas = $this->responsablesElementoService->preparar($reporte->elements);
+            $usos = array_column($fichas, 'uso');
+            $uso = [
+                'asignaciones' => array_sum(array_column($usos, 'asignaciones')),
+                'asignaciones_activas' => array_sum(array_column($usos, 'asignaciones_activas')),
+                'prestamos' => array_sum(array_column($usos, 'prestamos')),
+                'prestamos_activos' => array_sum(array_column($usos, 'prestamos_activos')),
+                'movimientos' => array_sum(array_column($usos, 'movimientos')),
+                'reportes' => array_sum(array_column($usos, 'reportes')),
+            ];
+            $responsables = array_values(array_unique(array_filter(
+                array_column($fichas, 'responsable')
+            )));
+
+            return [
+                'id' => $reporte->id,
+                'fecha_reporte' => $reporte->fecha_reporte,
+                'tipo' => $reporte->tipo,
+                'estado' => $reporte->estado,
+                'descripcion' => $reporte->descripcion,
+                'aprendiz' => ResponsablesElementoService::nombreCompleto($reporte->apprentice?->user)
+                    ?? 'Sin aprendiz registrado',
+                'elementos' => collect($fichas)
+                    ->map(fn (array $ficha) => $ficha['codigo'] . ' - ' . $ficha['nombre'])
+                    ->implode(', '),
+                'responsables' => implode(', ', $responsables),
+                'uso' => $this->responsablesElementoService->resumenUso($uso),
+            ];
+        })->all();
+
+        return [
+            'reportes' => $filas,
+            'total' => $reportes->count(),
+            'generado_en' => now(),
+        ];
+    }
+
+    private function relacionesParaPdf(): array
+    {
+        return [
+            'apprentice' => static fn ($query) => $query
+                ->select(['id', 'user_id', 'coursegroup_id', 'estado']),
+            'apprentice.user' => static fn ($query) => $query->select(self::REPORT_USER_FIELDS),
+            'elements' => static fn ($query) => $query
+                ->with(ResponsablesElementoService::relacionesParaPdf()),
+        ];
     }
 
     /**
