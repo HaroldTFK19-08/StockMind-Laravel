@@ -4,6 +4,7 @@ namespace App\Modules\Reportes\Services;
 
 use App\Modules\Reportes\Models\Report;
 use App\Modules\Shared\Services\CloudinaryService;
+use App\Modules\Shared\Services\PDFService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -13,7 +14,11 @@ class ReporteService
 {
     public function __construct(
         private CloudinaryService $cloudinaryService,
+<<<<<<< HEAD
         private CacheService $cache
+=======
+        private PDFService $pdfService
+>>>>>>> kevin
     ) {}
 
     private const REPORT_USER_FIELDS = [
@@ -129,6 +134,28 @@ class ReporteService
         if ($publicId) {
             $this->eliminarImagenSinInterrumpir($publicId);
         }
+    }
+
+    public function pdfDescargar(int $id)
+    {
+        $reporte = $this->mostrar($id);
+
+        return $this->pdfService->descargar(
+            'reportes.pdf',
+            ['reporte' => $reporte],
+            'reporte-' . $reporte->id . '.pdf'
+        );
+    }
+
+    public function pdfVer(int $id)
+    {
+        $reporte = $this->mostrar($id);
+
+        return $this->pdfService->ver(
+            'reportes.pdf',
+            ['reporte' => $reporte],
+            'reporte-' . $reporte->id . '.pdf'
+        );
     }
 
     private function eliminarImagenSinInterrumpir(string $publicId): void
