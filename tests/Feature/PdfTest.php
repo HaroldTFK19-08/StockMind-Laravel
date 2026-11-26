@@ -23,16 +23,15 @@ class PdfTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_el_pdf_de_un_reporte_muestra_el_responsable_y_el_uso(): void
+    public function test_no_existe_pdf_de_un_reporte_especifico(): void
     {
         $datos = $this->crearEscenario();
 
-        $respuesta = $this->get("/v1/reportes/{$datos['reporte']->id}/pdf/ver");
-
-        $respuesta->assertOk()
-            ->assertHeader('Content-Type', 'application/pdf');
-
-        $this->assertStringStartsWith('%PDF', $respuesta->getContent());
+        // El PDF de reportes es siempre general; estas rutas ya no se exponen.
+        $this->get("/v1/reportes/{$datos['reporte']->id}/pdf/ver")
+            ->assertNotFound();
+        $this->get("/v1/reportes/{$datos['reporte']->id}/pdf/descargar")
+            ->assertNotFound();
     }
 
     public function test_el_listado_de_reportes_genera_un_pdf(): void

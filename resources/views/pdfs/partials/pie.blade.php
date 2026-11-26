@@ -1,2 +1,5 @@
-{{-- Pie común: explica la regla de responsables usada en todos los documentos. --}}
-<div class="pdf-footer">{{ $texto }}</div>
+{{-- Pie común: deja constancia de la regla usada para calcular responsables. --}}
+<div class="pdf-footer">
+    <strong class="pdf-document-label">STOCKMIND</strong>
+    <span> · {{ $texto }}</span>
+</div>

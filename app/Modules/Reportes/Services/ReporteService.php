@@ -15,7 +15,7 @@ use App\Modules\Shared\Services\ResponsablesElementoService;
 
 class ReporteService
 {
-    // Aquí se usan los helpers del trait porque hay dos PDF: individual y listado.
+    // El trait aporta los helpers ver/descargar para el PDF general de reportes.
     use GeneraPdf;
 
     // Subida, transacción y limpieza de imágenes se comparten con otros servicios.
@@ -154,16 +154,6 @@ class ReporteService
         }
     }
 
-    public function pdfDescargar(int $id)
-    {
-        return $this->descargarPdf($this->datosReporteParaPdf($id), 'reportes.pdf', "reporte-{$id}.pdf");
-    }
-
-    public function pdfVer(int $id)
-    {
-        return $this->verPdf($this->datosReporteParaPdf($id), 'reportes.pdf', "reporte-{$id}.pdf");
-    }
-
     public function pdfListadoDescargar()
     {
         return $this->descargarPdf($this->datosListadoParaPdf(), 'reportes.listado-pdf', 'reportes.pdf');
@@ -172,22 +162,6 @@ class ReporteService
     public function pdfListadoVer()
     {
         return $this->verPdf($this->datosListadoParaPdf(), 'reportes.listado-pdf', 'reportes.pdf');
-    }
-
-    /**
-     * @return array{reporte: Report, elementos: array<int, array<string, mixed>>, generado_en: \Illuminate\Support\Carbon}
-     */
-    private function datosReporteParaPdf(int $id): array
-    {
-        $reporte = Report::query()
-            ->with($this->relacionesParaPdf())
-            ->findOrFail($id);
-
-        return [
-            'reporte' => $reporte,
-            'elementos' => $this->responsablesElementoService->preparar($reporte->elements),
-            'generado_en' => now(),
-        ];
     }
 
     /**

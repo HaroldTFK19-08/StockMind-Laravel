@@ -1,20 +1,17 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Inventario de elementos</title>
-    @include('pdfs.partials.estilos')
-    <style>@page { size: a4 landscape; }</style>
-</head>
-<body class="pdf-body">
-    {{-- Datos de identificación del documento. --}}
+@extends('pdfs.layout')
+
+@section('titulo', 'Inventario de elementos')
+
+@section('cabecera')
     @include('pdfs.partials.cabecera', [
         'titulo' => 'Inventario de elementos',
         'subtitulo' => 'StockMind - Responsables y uso del inventario',
         'total' => $total,
         'generado_en' => $generado_en,
     ])
+@endsection
 
+@section('contenido')
     <table class="pdf-table">
         <thead>
             <tr>
@@ -32,44 +29,55 @@
                 <tr>
                     <td class="pdf-nowrap">{{ $elemento['codigo'] }}</td>
                     <td>
-                        {{ $elemento['nombre'] }}
-                        <div class="pdf-small">
-                            @if($elemento['serial']) Serial {{ $elemento['serial'] }} @endif
-                            @if($elemento['marca']) · {{ $elemento['marca'] }} @endif
-                            @if($elemento['modelo']) · {{ $elemento['modelo'] }} @endif
-                        </div>
+                        <strong class="pdf-cell-title">{{ $elemento['nombre'] }}</strong>
+                        @php
+                            $ficha = collect([
+                                $elemento['serial'] ? "Serial {$elemento['serial']}" : null,
+                                $elemento['marca'],
+                                $elemento['modelo'],
+                            ])->filter()->implode(' · ');
+                        @endphp
+                        @if($ficha !== '')
+                            <div class="pdf-small">{{ $ficha }}</div>
+                        @endif
                     </td>
                     <td>{{ $elemento['categoria'] }}</td>
                     <td>{{ $elemento['ubicacion'] }}</td>
                     <td>
-                        {{ ucfirst(str_replace('_', ' ', (string) $elemento['estado'])) }}
+                        <span class="pdf-status">{{ ucfirst(str_replace('_', ' ', (string) $elemento['estado'])) }}</span>
                         @if($elemento['condicion'])
-                            <div class="pdf-small">Condición: {{ $elemento['condicion'] }}</div>
+                            <span class="pdf-cell-detail">Condición: {{ $elemento['condicion'] }}</span>
                         @endif
                     </td>
                     <td>
-                        {{ $elemento['responsable'] }}
-                        <div class="pdf-small">{{ $elemento['tipo_responsable'] }}</div>
+                        <strong class="pdf-cell-title">{{ $elemento['responsable'] }}</strong>
+                        <span class="pdf-cell-detail">{{ $elemento['tipo_responsable'] }}</span>
                     </td>
                     <td>
                         {!! nl2br(e($elemento['resumen_uso'])) !!}
-                        <div class="pdf-small">
-                            @if($elemento['uso']['ultima_asignacion']) Última asignación: {{ $elemento['uso']['ultima_asignacion'] }} @endif
-                            @if($elemento['uso']['ultimo_prestamo']) · Último préstamo: {{ $elemento['uso']['ultimo_prestamo'] }} @endif
-                            @if($elemento['uso']['ultimo_movimiento']) · Último movimiento: {{ $elemento['uso']['ultimo_movimiento'] }} @endif
-                        </div>
+                        @php
+                            $fechas = collect([
+                                $elemento['uso']['ultima_asignacion'] ? "Última asignación: {$elemento['uso']['ultima_asignacion']}" : null,
+                                $elemento['uso']['ultimo_prestamo'] ? "Último préstamo: {$elemento['uso']['ultimo_prestamo']}" : null,
+                                $elemento['uso']['ultimo_movimiento'] ? "Último movimiento: {$elemento['uso']['ultimo_movimiento']}" : null,
+                            ])->filter()->implode(' · ');
+                        @endphp
+                        @if($fechas !== '')
+                                <span class="pdf-cell-detail">{{ $fechas }}</span>
+                        @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7">No hay elementos registrados en el inventario.</td>
+                    <td colspan="7" class="pdf-empty">No hay elementos registrados en el inventario.</td>
                 </tr>
             @endforelse
         </tbody>
     </table>
+@endsection
 
+@section('pie')
     @include('pdfs.partials.pie', [
         'texto' => 'Responsable actual por prioridad: aprendiz con asignación activa, instructor con préstamo activo, cuenta-dante del ambiente, instructor responsable del ambiente o almacén.',
     ])
-</body>
-</html>
+@endsection

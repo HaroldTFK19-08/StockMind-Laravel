@@ -58,16 +58,6 @@ class ReportesController extends Controller
         return $this->eliminado('Reporte');
     }
 
-    public function pdfDescargar(int $id): Response
-    {
-        return $this->reporteFacade->pdfDescargar($id);
-    }
-
-    public function pdfVer(int $id): Response
-    {
-        return $this->reporteFacade->pdfVer($id);
-    }
-
     public function pdfListadoVer(): Response
     {
         return $this->reporteFacade->pdfListadoVer();

@@ -15,16 +15,6 @@ class ReporteFacade extends CrudFacade
         parent::__construct($reporteService);
     }
 
-    public function pdfDescargar(int $id): Response
-    {
-        return $this->servicio->pdfDescargar($id);
-    }
-
-    public function pdfVer(int $id): Response
-    {
-        return $this->servicio->pdfVer($id);
-    }
-
     public function pdfListadoVer(): Response
     {
         return $this->servicio->pdfListadoVer();

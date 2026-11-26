@@ -15,30 +15,89 @@
     .pdf-body {
         @apply bg-white text-sm-tinta;
         font-family: "DejaVu Sans", sans-serif;
-        font-size: 10px;
+        font-size: 9px;
+        line-height: 1.45;
     }
 
     .pdf-header {
         @apply mb-3 border-b-2 border-sm-bosque pb-2;
-        border-bottom-style: solid;
+        border-bottom: 2px solid #17330f;
+    }
+
+    .pdf-header-grid {
+        @apply mb-2 w-full border-collapse;
+    }
+
+    .pdf-header-grid td {
+        @apply align-middle;
+        padding: 0;
+        border: 0;
+    }
+
+    .pdf-brand-mark {
+        @apply inline-block rounded-sm bg-sm-verde px-1 py-1 text-[9px] font-bold text-white;
+        padding: 3px 6px;
+        background-color: #39a900;
+        color: #ffffff;
+    }
+
+    .pdf-brand-name {
+        @apply ml-1 text-[10px] font-bold tracking-wide text-sm-bosque;
+        color: #17330f;
+    }
+
+    .pdf-document-meta {
+        @apply text-right text-[8px] text-sm-gris;
+    }
+
+    .pdf-document-label {
+        @apply font-bold tracking-wide text-sm-verde-oscuro;
+        color: #2b8000;
     }
 
     .pdf-title {
         @apply m-0 text-xl font-bold text-sm-bosque;
-        line-height: 1.75rem;
+        font-size: 18px;
+        line-height: 1.2;
+        color: #17330f;
     }
 
     .pdf-subtitle {
-        @apply text-sm-gris;
+        @apply text-sm text-sm-gris;
+        margin-top: 2px;
+        font-size: 9px;
     }
 
-    .pdf-section {
-        @apply mb-1 mt-4 text-[13px] font-bold text-sm-verde-oscuro;
+    .pdf-header-meta {
+        @apply mt-2 w-full border-collapse;
+        border-top: 1px solid #dde3d8;
+    }
+
+    .pdf-header-meta td {
+        @apply pt-1 align-top;
+        padding-right: 10px;
+        border: 0;
+    }
+
+    .pdf-meta-label {
+        @apply block text-[7px] font-bold tracking-wide text-sm-gris;
+        color: #5f6b5c;
+    }
+
+    .pdf-meta-value {
+        @apply block text-[9px] font-bold text-sm-tinta;
+        margin-top: 1px;
     }
 
     .pdf-meta,
     .pdf-table {
         @apply w-full border-collapse;
+    }
+
+    .pdf-table {
+        table-layout: fixed;
+        margin-top: 8px;
+        font-size: 8px;
     }
 
     .pdf-meta td {
@@ -52,24 +111,27 @@
 
     .pdf-table th {
         @apply border border-sm-bosque bg-sm-verde px-1 py-1 text-left text-[9px] font-bold text-white;
-        border-style: solid;
-        padding-left: 0.25rem;
-        padding-right: 0.25rem;
-        padding-top: 0.25rem;
-        padding-bottom: 0.25rem;
+        border: 1px solid #2b8000;
+        padding: 6px 5px;
+        background-color: #39a900;
+        color: #ffffff;
+        font-size: 7px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        vertical-align: middle;
     }
 
     .pdf-table td {
         @apply border border-sm-linea px-1 py-1 align-top text-left;
-        border-style: solid;
-        padding-left: 0.25rem;
-        padding-right: 0.25rem;
-        padding-top: 0.25rem;
-        padding-bottom: 0.25rem;
+        border: 1px solid #dde3d8;
+        padding: 5px;
+        vertical-align: top;
+        overflow-wrap: break-word;
     }
 
     .pdf-table tbody tr:nth-child(even) td {
         @apply bg-sm-papel;
+        background-color: #f4f6f1;
     }
 
     .pdf-label {
@@ -78,11 +140,14 @@
 
     .pdf-small {
         @apply text-[8px] text-sm-gris;
+        font-size: 7px;
+        line-height: 1.35;
     }
 
     .pdf-footer {
         @apply mt-3 border-t border-sm-linea pt-2 text-[8px] text-sm-gris;
-        border-top-style: solid;
+        border-top: 1px solid #dde3d8;
+        line-height: 1.4;
     }
 
     .pdf-photo {
@@ -93,5 +158,64 @@
 
     .pdf-nowrap {
         white-space: nowrap;
+    }
+
+    /* DomPDF: repite la cabecera y evita partir una fila entre páginas. */
+    .pdf-table thead {
+        display: table-header-group;
+    }
+
+    .pdf-table tr {
+        page-break-inside: avoid;
+    }
+
+    .pdf-brand {
+        @apply mb-1 text-[9px] font-bold tracking-wide text-sm-verde-oscuro;
+    }
+
+    .pdf-cell-title {
+        @apply font-bold text-sm-tinta;
+        font-size: 8px;
+    }
+
+    .pdf-cell-detail {
+        @apply mt-1 text-[8px] text-sm-gris;
+        display: block;
+        margin-top: 2px;
+        color: #5f6b5c;
+        font-size: 7px;
+        line-height: 1.35;
+    }
+
+    .pdf-status {
+        @apply inline-block rounded-sm bg-sm-hoja px-1 py-1 font-bold text-sm-verde-oscuro;
+        padding: 2px 5px;
+        background-color: #eaf4e2;
+        color: #2b8000;
+        font-size: 7px;
+        text-transform: capitalize;
+    }
+
+    .pdf-empty {
+        @apply py-3 text-center text-sm-gris;
+        padding: 18px 8px;
+        background-color: #f4f6f1;
+        font-style: italic;
+    }
+
+    .pdf-descripcion {
+        @apply px-1 py-1 text-[8px] text-sm-gris;
+        background-color: #f8faf6;
+        line-height: 1.45;
+    }
+
+    .pdf-report-description {
+        display: block;
+        margin-top: 3px;
+        padding-top: 3px;
+        border-top: 1px solid #dde3d8;
+        color: #5f6b5c;
+        font-size: 7px;
+        line-height: 1.35;
     }
 }
