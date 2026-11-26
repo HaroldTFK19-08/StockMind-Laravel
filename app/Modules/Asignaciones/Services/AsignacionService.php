@@ -6,23 +6,38 @@ use App\Modules\Asignaciones\Models\Assignment;
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Prestamos\Models\Loan;
 use App\Modules\Shared\Enums\TipoNotificacion;
-use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use Illuminate\Support\Facades\DB;
 use App\Modules\Shared\Services\CacheService;
+use App\Modules\Shared\Services\Concerns\GeneraPdf;
+use App\Modules\Shared\Services\Concerns\GestionaDisponibilidadElemento;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Shared\Services\PDFService;
 use App\Modules\Shared\Services\ResponsablesElementoService;
 
 class AsignacionService
 {
+    // El trait aporta pdfVer() y pdfDescargar(); los datos los construye este servicio.
+    use GeneraPdf;
+
+    // Disponibilidad del elemento y recálculo de estado compartidos con préstamos.
+    use GestionaDisponibilidadElemento;
+
+    protected function vistaPdf(): string
+    {
+        return 'asignaciones.pdf';
+    }
+
+    protected function nombrePdf(): string
+    {
+        return 'asignaciones.pdf';
+    }
+
     public function __construct(
         private CacheService $cache,
         private NotificacionService $notificacionService,
         private PDFService $pdfService,
         private ResponsablesElementoService $responsablesElementoService
     ) {}
-
-    private const ESTADOS_ACTIVOS = ['activa', 'vencida'];
 
     public function listar()
     {
@@ -52,13 +67,13 @@ class AsignacionService
                 ->findOrFail($datos['element_id']);
             $estado = $datos['estado'] ?? 'activa';
 
-            if ($this->estaActiva($estado)) {
+            if ($this->estaActivo($estado)) {
                 $this->verificarElementoDisponible($elemento);
             }
 
             $asignacion = Assignment::create($datos);
 
-            if ($this->estaActiva($estado)) {
+            if ($this->estaActivo($estado)) {
                 $elemento->update(['estado' => 'asignado']);
             }
 
@@ -93,9 +108,9 @@ class AsignacionService
                 ->keyBy('id');
             $elementoAnterior = $elementos->get($elementoAnteriorId);
             $elementoNuevo = $elementos->get($elementoNuevoId);
-            $estadoAnteriorActivo = $this->estaActiva($asignacion->estado);
+            $estadoAnteriorActivo = $this->estaActivo($asignacion->estado);
             $estadoNuevo = $datos['estado'] ?? $asignacion->estado;
-            $estadoNuevoActivo = $this->estaActiva($estadoNuevo);
+            $estadoNuevoActivo = $this->estaActivo($estadoNuevo);
 
             if ($estadoNuevoActivo) {
                 $mismoElementoActivo = $elementoAnteriorId === $elementoNuevoId
@@ -148,7 +163,7 @@ class AsignacionService
             $elemento = Element::query()
                 ->lockForUpdate()
                 ->findOrFail($asignacion->element_id);
-            $estabaActiva = $this->estaActiva($asignacion->estado);
+            $estabaActiva = $this->estaActivo($asignacion->estado);
 
             $asignacion->delete();
 
@@ -165,70 +180,6 @@ class AsignacionService
                 TipoNotificacion::AsignacionActualizada
             );
         });
-    }
-
-    private function verificarElementoDisponible(Element $elemento, ?int $asignacionId = null): void
-    {
-        $tieneAsignacionActiva = Assignment::query()
-            ->where('element_id', $elemento->id)
-            ->whereIn('estado', self::ESTADOS_ACTIVOS)
-            ->when(
-                $asignacionId !== null,
-                fn ($query) => $query->where('id', '!=', $asignacionId)
-            )
-            ->exists();
-        $tienePrestamoActivo = Loan::query()
-            ->where('element_id', $elemento->id)
-            ->whereIn('estado', ['activo', 'vencido'])
-            ->exists();
-
-        if (
-            $elemento->estado !== 'disponible'
-            || $tieneAsignacionActiva
-            || $tienePrestamoActivo
-        ) {
-            throw new ReglasNegocioExceptions(
-                'El elemento no está disponible para una nueva asignación.'
-            );
-        }
-    }
-
-    private function actualizarEstadoElemento(Element $elemento): void
-    {
-        $tieneAsignacionActiva = Assignment::query()
-            ->where('element_id', $elemento->id)
-            ->whereIn('estado', self::ESTADOS_ACTIVOS)
-            ->exists();
-        $tienePrestamoActivo = Loan::query()
-            ->where('element_id', $elemento->id)
-            ->whereIn('estado', ['activo', 'vencido'])
-            ->exists();
-
-        if ($tieneAsignacionActiva) {
-            $elemento->update(['estado' => 'asignado']);
-        } elseif ($tienePrestamoActivo) {
-            $elemento->update(['estado' => 'prestado']);
-        } elseif ($elemento->estado === 'asignado') {
-            $elemento->update(['estado' => 'disponible']);
-        }
-    }
-
-    public function pdfVer()
-    {
-        return $this->pdfService->ver(
-            'asignaciones.pdf',
-            $this->datosParaPdf(),
-            'asignaciones.pdf'
-        );
-    }
-
-    public function pdfDescargar()
-    {
-        return $this->pdfService->descargar(
-            'asignaciones.pdf',
-            $this->datosParaPdf(),
-            'asignaciones.pdf'
-        );
     }
 
     /**
@@ -306,8 +257,39 @@ class AsignacionService
         );
     }
 
-    private function estaActiva(string $estado): bool
+    // Configuración que el trait necesita para el dominio de asignaciones.
+    protected function estadosActivos(): array
     {
-        return in_array($estado, self::ESTADOS_ACTIVOS, true);
+        return ['activa', 'vencida'];
+    }
+
+    protected function estadosOpuestosActivos(): array
+    {
+        return ['activo', 'vencido'];
+    }
+
+    protected function modeloUso(): string
+    {
+        return Assignment::class;
+    }
+
+    protected function modeloOpuesto(): string
+    {
+        return Loan::class;
+    }
+
+    protected function estadoElementoOcupado(): string
+    {
+        return 'asignado';
+    }
+
+    protected function estadoElementoOcupadoOpuesto(): string
+    {
+        return 'prestado';
+    }
+
+    protected function mensajeNoDisponible(): string
+    {
+        return 'El elemento no está disponible para una nueva asignación.';
     }
 }

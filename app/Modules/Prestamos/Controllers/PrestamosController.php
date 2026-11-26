@@ -3,6 +3,7 @@
 namespace App\Modules\Prestamos\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Prestamos\Facades\PrestamoFacade;
 use App\Modules\Prestamos\Requests\ActualizarPrestamoRequest;
 use App\Modules\Prestamos\Requests\RegistroPrestamoRequest;
@@ -10,13 +11,15 @@ use Illuminate\Http\JsonResponse;
 
 class PrestamosController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private PrestamoFacade $prestamoFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->prestamoFacade->listar()
         );
     }
@@ -27,17 +30,12 @@ class PrestamosController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Préstamo registrado correctamente.',
-            'data' => $prestamo,
-        ], 201);
+        return $this->creado('Préstamo', $prestamo);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->prestamoFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->prestamoFacade->mostrar($id));
     }
 
     public function update(
@@ -49,18 +47,13 @@ class PrestamosController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Préstamo actualizado correctamente.',
-            'data' => $prestamo,
-        ]);
+        return $this->actualizado('Préstamo', $prestamo);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->prestamoFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Préstamo eliminado correctamente.',
-        ]);
+        return $this->eliminado('Préstamo');
     }
 }

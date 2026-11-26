@@ -2,58 +2,36 @@
 
 namespace App\Modules\Reportes\Facades;
 
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Reportes\Models\Report;
 use App\Modules\Reportes\Services\ReporteService;
 use Illuminate\Http\Response;
 
-class ReporteFacade
+class ReporteFacade extends CrudFacade
 {
-    public function __construct(
-        private ReporteService $reporteService
-    ) {}
-
-    public function listar()
+    public function __construct(ReporteService $reporteService)
     {
-        return $this->reporteService->listar();
-    }
-
-    public function mostrar(int $id): Report
-    {
-        return $this->reporteService->mostrar($id);
-    }
-
-    public function crear(array $datos): Report
-    {
-        return $this->reporteService->crear($datos);
-    }
-
-    public function actualizar(int $id, array $datos): Report
-    {
-        return $this->reporteService->actualizar($id, $datos);
-    }
-
-    public function eliminar(int $id): void
-    {
-        $this->reporteService->eliminar($id);
+        parent::__construct($reporteService);
     }
 
     public function pdfDescargar(int $id): Response
     {
-        return $this->reporteService->pdfDescargar($id);
+        return $this->servicio->pdfDescargar($id);
     }
 
     public function pdfVer(int $id): Response
     {
-        return $this->reporteService->pdfVer($id);
+        return $this->servicio->pdfVer($id);
     }
 
     public function pdfListadoVer(): Response
     {
-        return $this->reporteService->pdfListadoVer();
+        return $this->servicio->pdfListadoVer();
     }
 
     public function pdfListadoDescargar(): Response
     {
-        return $this->reporteService->pdfListadoDescargar();
+        return $this->servicio->pdfListadoDescargar();
     }
 }

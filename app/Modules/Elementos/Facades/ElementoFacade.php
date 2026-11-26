@@ -2,48 +2,26 @@
 
 namespace App\Modules\Elementos\Facades;
 
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Elementos\Services\ElementoService;
 use Illuminate\Http\Response;
 
-class ElementoFacade
+class ElementoFacade extends CrudFacade
 {
-    public function __construct(
-        private ElementoService $elementoService
-    ) {}
-
-    public function listar()
+    public function __construct(ElementoService $elementoService)
     {
-        return $this->elementoService->listar();
-    }
-
-    public function mostrar(int $id): array
-    {
-        return $this->elementoService->mostrar($id);
-    }
-
-    public function crear(array $datos): Element
-    {
-        return $this->elementoService->crear($datos);
-    }
-
-    public function actualizar(int $id, array $datos): Element
-    {
-        return $this->elementoService->actualizar($id, $datos);
-    }
-
-    public function eliminar(int $id): void
-    {
-        $this->elementoService->eliminar($id);
+        parent::__construct($elementoService);
     }
 
     public function pdfVer(): Response
     {
-        return $this->elementoService->pdfVer();
+        return $this->servicio->pdfVer();
     }
 
     public function pdfDescargar(): Response
     {
-        return $this->elementoService->pdfDescargar();
+        return $this->servicio->pdfDescargar();
     }
 }

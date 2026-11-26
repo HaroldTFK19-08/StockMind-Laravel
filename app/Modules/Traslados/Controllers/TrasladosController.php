@@ -3,6 +3,7 @@
 namespace App\Modules\Traslados\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Traslados\Facades\TrasladoFacade;
 use App\Modules\Traslados\Requests\ActualizarTrasladoRequest;
 use App\Modules\Traslados\Requests\RegistroTrasladoRequest;
@@ -10,13 +11,15 @@ use Illuminate\Http\JsonResponse;
 
 class TrasladosController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private TrasladoFacade $trasladoFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->trasladoFacade->listar()
         );
     }
@@ -27,17 +30,12 @@ class TrasladosController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Traslado registrado correctamente.',
-            'data' => $traslado,
-        ], 201);
+        return $this->creado('Traslado', $traslado);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->trasladoFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->trasladoFacade->mostrar($id));
     }
 
     public function update(
@@ -49,18 +47,13 @@ class TrasladosController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Traslado actualizado correctamente.',
-            'data' => $traslado,
-        ]);
+        return $this->actualizado('Traslado', $traslado);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->trasladoFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Traslado eliminado correctamente.',
-        ]);
+        return $this->eliminado('Traslado');
     }
 }

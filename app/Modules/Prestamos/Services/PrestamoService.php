@@ -5,17 +5,18 @@ namespace App\Modules\Prestamos\Services;
 use App\Modules\Asignaciones\Models\Assignment;
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Prestamos\Models\Loan;
-use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use Illuminate\Support\Facades\DB;
 use App\Modules\Shared\Services\CacheService;
+use App\Modules\Shared\Services\Concerns\GestionaDisponibilidadElemento;
 
 class PrestamoService
 {
+    // Disponibilidad del elemento y recálculo de estado compartidos con asignaciones.
+    use GestionaDisponibilidadElemento;
+
     public function __construct(
         private CacheService $cache
     ) {}
-
-    private const ESTADOS_ACTIVOS = ['activo', 'vencido'];
 
     public function listar()
     {
@@ -142,54 +143,39 @@ class PrestamoService
         });
     }
 
-    private function verificarElementoDisponible(Element $elemento, ?int $prestamoId = null): void
+    // Configuración que el trait necesita para el dominio de préstamos.
+    protected function estadosActivos(): array
     {
-        $tieneOtroPrestamoActivo = Loan::query()
-            ->where('element_id', $elemento->id)
-            ->whereIn('estado', self::ESTADOS_ACTIVOS)
-            ->when(
-                $prestamoId !== null,
-                fn ($query) => $query->where('id', '!=', $prestamoId)
-            )
-            ->exists();
-        $tieneAsignacionActiva = Assignment::query()
-            ->where('element_id', $elemento->id)
-            ->whereIn('estado', ['activa', 'vencida'])
-            ->exists();
-
-        if (
-            $elemento->estado !== 'disponible'
-            || $tieneOtroPrestamoActivo
-            || $tieneAsignacionActiva
-        ) {
-            throw new ReglasNegocioExceptions(
-                'El elemento no está disponible para un nuevo préstamo.'
-            );
-        }
+        return ['activo', 'vencido'];
     }
 
-    private function actualizarEstadoElemento(Element $elemento): void
+    protected function estadosOpuestosActivos(): array
     {
-        $tienePrestamoActivo = Loan::query()
-            ->where('element_id', $elemento->id)
-            ->whereIn('estado', self::ESTADOS_ACTIVOS)
-            ->exists();
-        $tieneAsignacionActiva = Assignment::query()
-            ->where('element_id', $elemento->id)
-            ->whereIn('estado', ['activa', 'vencida'])
-            ->exists();
-
-        if ($tienePrestamoActivo) {
-            $elemento->update(['estado' => 'prestado']);
-        } elseif ($tieneAsignacionActiva) {
-            $elemento->update(['estado' => 'asignado']);
-        } elseif ($elemento->estado === 'prestado') {
-            $elemento->update(['estado' => 'disponible']);
-        }
+        return ['activa', 'vencida'];
     }
 
-    private function estaActivo(string $estado): bool
+    protected function modeloUso(): string
     {
-        return in_array($estado, self::ESTADOS_ACTIVOS, true);
+        return Loan::class;
+    }
+
+    protected function modeloOpuesto(): string
+    {
+        return Assignment::class;
+    }
+
+    protected function estadoElementoOcupado(): string
+    {
+        return 'prestado';
+    }
+
+    protected function estadoElementoOcupadoOpuesto(): string
+    {
+        return 'asignado';
+    }
+
+    protected function mensajeNoDisponible(): string
+    {
+        return 'El elemento no está disponible para un nuevo préstamo.';
     }
 }

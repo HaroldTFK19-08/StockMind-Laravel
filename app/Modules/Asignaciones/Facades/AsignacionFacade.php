@@ -2,48 +2,25 @@
 
 namespace App\Modules\Asignaciones\Facades;
 
-use App\Modules\Asignaciones\Models\Assignment;
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Asignaciones\Services\AsignacionService;
 use Illuminate\Http\Response;
 
-class AsignacionFacade
+class AsignacionFacade extends CrudFacade
 {
-    public function __construct(
-        private AsignacionService $asignacionService
-    ) {}
-
-    public function listar()
+    public function __construct(AsignacionService $asignacionService)
     {
-        return $this->asignacionService->listar();
-    }
-
-    public function mostrar(int $id): Assignment
-    {
-        return $this->asignacionService->mostrar($id);
-    }
-
-    public function crear(array $datos): Assignment
-    {
-        return $this->asignacionService->crear($datos);
-    }
-
-    public function actualizar(int $id, array $datos): Assignment
-    {
-        return $this->asignacionService->actualizar($id, $datos);
-    }
-
-    public function eliminar(int $id): void
-    {
-        $this->asignacionService->eliminar($id);
+        parent::__construct($asignacionService);
     }
 
     public function pdfVer(): Response
     {
-        return $this->asignacionService->pdfVer();
+        return $this->servicio->pdfVer();
     }
 
     public function pdfDescargar(): Response
     {
-        return $this->asignacionService->pdfDescargar();
+        return $this->servicio->pdfDescargar();
     }
 }

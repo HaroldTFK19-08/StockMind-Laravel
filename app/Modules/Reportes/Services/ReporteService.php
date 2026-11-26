@@ -5,17 +5,22 @@ namespace App\Modules\Reportes\Services;
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Reportes\Models\Report;
 use App\Modules\Shared\Enums\TipoNotificacion;
+use App\Modules\Shared\Services\CacheService;
 use App\Modules\Shared\Services\CloudinaryService;
+use App\Modules\Shared\Services\Concerns\GeneraPdf;
+use App\Modules\Shared\Services\Concerns\GestionaImagenes;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Shared\Services\PDFService;
 use App\Modules\Shared\Services\ResponsablesElementoService;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
-use Throwable;
-use App\Modules\Shared\Services\CacheService;
 
 class ReporteService
 {
+    // Aquí se usan los helpers del trait porque hay dos PDF: individual y listado.
+    use GeneraPdf;
+
+    // Subida, transacción y limpieza de imágenes se comparten con otros servicios.
+    use GestionaImagenes;
+
     public function __construct(
         private CloudinaryService $cloudinaryService,
         private CacheService $cache,
@@ -64,10 +69,10 @@ class ReporteService
         $elementIds = $datos['element_ids'];
         unset($datos['foto_probatorio'], $datos['element_ids']);
 
-        $imagen = $this->cloudinaryService->subir($foto, 'reportes');
-
-        try {
-            $reporte = DB::transaction(function () use ($datos, $elementIds, $imagen) {
+        $reporte = $this->transaccionConImagen(
+            $foto,
+            'reportes',
+            function (array $imagen) use ($datos, $elementIds) {
                 $reporte = Report::create([
                     ...$datos,
                     'foto_probatorio' => $imagen['url'],
@@ -77,11 +82,8 @@ class ReporteService
                 $this->notificarReporteCreado($reporte, $elementIds);
 
                 return $reporte;
-            });
-        } catch (Throwable $e) {
-            $this->eliminarImagenSinInterrumpir($imagen['public_id']);
-            throw $e;
-        }
+            }
+        );
 
         $this->cache->invalidar('reportes');
 
@@ -97,29 +99,24 @@ class ReporteService
         $foto = $datos['foto_probatorio'] ?? null;
         $elementIds = $datos['element_ids'] ?? null;
         unset($datos['foto_probatorio'], $datos['element_ids']);
-        $imagenNueva = null;
 
-        if ($foto instanceof UploadedFile) {
-            $imagenNueva = $this->cloudinaryService->subir($foto, 'reportes');
-            $datos['foto_probatorio'] = $imagenNueva['url'];
-            $datos['foto_probatorio_public_id'] = $imagenNueva['public_id'];
-        }
+        $this->transaccionConImagen(
+            $foto,
+            'reportes',
+            function (?array $imagen) use ($reporte, &$datos, $elementIds) {
+                if ($imagen !== null) {
+                    $datos['foto_probatorio'] = $imagen['url'];
+                    $datos['foto_probatorio_public_id'] = $imagen['public_id'];
+                }
 
-        try {
-            DB::transaction(function () use ($reporte, $datos, $elementIds) {
                 $reporte->update($datos);
 
                 if ($elementIds !== null) {
                     $reporte->elements()->sync($elementIds);
                 }
-            });
-        } catch (Throwable $e) {
-            if ($imagenNueva !== null) {
-                $this->eliminarImagenSinInterrumpir($imagenNueva['public_id']);
-            }
-
-            throw $e;
-        }
+            },
+            $publicIdAnterior
+        );
 
         $elementosNuevos = $elementIds === null
             ? []
@@ -139,10 +136,6 @@ class ReporteService
             );
         }
 
-        if ($imagenNueva !== null && $publicIdAnterior) {
-            $this->eliminarImagenSinInterrumpir($publicIdAnterior);
-        }
-
         $this->cache->invalidar('reportes');
 
         return $this->mostrar($id);
@@ -157,48 +150,28 @@ class ReporteService
         $this->cache->invalidar('reportes');
 
         if ($publicId) {
-            $this->eliminarImagenSinInterrumpir($publicId);
+            $this->cloudinaryService->eliminarSinInterrumpir($publicId);
         }
     }
 
     public function pdfDescargar(int $id)
     {
-        $datos = $this->datosReporteParaPdf($id);
-
-        return $this->pdfService->descargar(
-            'reportes.pdf',
-            $datos,
-            'reporte-' . $id . '.pdf'
-        );
+        return $this->descargarPdf($this->datosReporteParaPdf($id), 'reportes.pdf', "reporte-{$id}.pdf");
     }
 
     public function pdfVer(int $id)
     {
-        $datos = $this->datosReporteParaPdf($id);
-
-        return $this->pdfService->ver(
-            'reportes.pdf',
-            $datos,
-            'reporte-' . $id . '.pdf'
-        );
+        return $this->verPdf($this->datosReporteParaPdf($id), 'reportes.pdf', "reporte-{$id}.pdf");
     }
 
     public function pdfListadoDescargar()
     {
-        return $this->pdfService->descargar(
-            'reportes.listado-pdf',
-            $this->datosListadoParaPdf(),
-            'reportes.pdf'
-        );
+        return $this->descargarPdf($this->datosListadoParaPdf(), 'reportes.listado-pdf', 'reportes.pdf');
     }
 
     public function pdfListadoVer()
     {
-        return $this->pdfService->ver(
-            'reportes.listado-pdf',
-            $this->datosListadoParaPdf(),
-            'reportes.pdf'
-        );
+        return $this->verPdf($this->datosListadoParaPdf(), 'reportes.listado-pdf', 'reportes.pdf');
     }
 
     /**
@@ -229,15 +202,8 @@ class ReporteService
 
         $filas = $reportes->map(function (Report $reporte) {
             $fichas = $this->responsablesElementoService->preparar($reporte->elements);
-            $usos = array_column($fichas, 'uso');
-            $uso = [
-                'asignaciones' => array_sum(array_column($usos, 'asignaciones')),
-                'asignaciones_activas' => array_sum(array_column($usos, 'asignaciones_activas')),
-                'prestamos' => array_sum(array_column($usos, 'prestamos')),
-                'prestamos_activos' => array_sum(array_column($usos, 'prestamos_activos')),
-                'movimientos' => array_sum(array_column($usos, 'movimientos')),
-                'reportes' => array_sum(array_column($usos, 'reportes')),
-            ];
+            // La suma de uso vive en el servicio compartido de fichas.
+            $uso = $this->responsablesElementoService->sumarUso($fichas);
             $responsables = array_values(array_unique(array_filter(
                 array_column($fichas, 'responsable')
             )));
@@ -348,12 +314,4 @@ class ReporteService
         );
     }
 
-    private function eliminarImagenSinInterrumpir(string $publicId): void
-    {
-        try {
-            $this->cloudinaryService->eliminar($publicId);
-        } catch (Throwable $e) {
-            report($e);
-        }
-    }
 }

@@ -3,6 +3,7 @@
 namespace App\Modules\Roles\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Roles\Facades\RolFacade;
 use App\Modules\Roles\Requests\ActualizarRolRequest;
 use App\Modules\Roles\Requests\RegistroRolRequest;
@@ -10,12 +11,14 @@ use Illuminate\Http\JsonResponse;
 
 class RolesController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private RolFacade $rolFacade
     ) {}
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->rolFacade->listar()
         );
     }
@@ -25,16 +28,11 @@ class RolesController extends Controller
         $rol = $this->rolFacade->crear(
             $request->validated()
         );
-        return response()->json([
-            'message' => 'Rol registrado correctamente.',
-            'data' => $rol,
-        ], 201);
+        return $this->creado('Rol', $rol);
     }
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->rolFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->rolFacade->mostrar($id));
     }
     public function update(
         ActualizarRolRequest $request,
@@ -44,16 +42,11 @@ class RolesController extends Controller
             $id,
             $request->validated()
         );
-        return response()->json([
-            'message' => 'Rol actualizado correctamente.',
-            'data' => $rol,
-        ]);
+        return $this->actualizado('Rol', $rol);
     }
     public function destroy(int $id): JsonResponse
     {
         $this->rolFacade->eliminar($id);
-        return response()->json([
-            'message' => 'Rol eliminado correctamente.',
-        ]);
+        return $this->eliminado('Rol');
     }
 }

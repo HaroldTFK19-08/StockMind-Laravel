@@ -7,13 +7,13 @@
     <style>@page { size: a4 landscape; }</style>
 </head>
 <body class="pdf-body">
-    <div class="pdf-header">
-        <h1 class="pdf-title">Reportes de elementos</h1>
-        <div class="pdf-subtitle">StockMind - Consolidado de novedades</div>
-        <div class="pdf-small">
-            Total: {{ $total }} · Generado: {{ $generado_en?->format('d/m/Y H:i') }}
-        </div>
-    </div>
+    {{-- Datos de identificación del documento. --}}
+    @include('pdfs.partials.cabecera', [
+        'titulo' => 'Reportes de elementos',
+        'subtitulo' => 'StockMind - Consolidado de novedades',
+        'total' => $total,
+        'generado_en' => $generado_en,
+    ])
 
     <table class="pdf-table">
         <thead>
@@ -53,9 +53,8 @@
         </tbody>
     </table>
 
-    <div class="pdf-footer">
-        Los responsables se resuelven por elemento: aprendiz con asignación activa, instructor con
-        préstamo activo, cuenta-dante del ambiente, instructor responsable o almacén.
-    </div>
+    @include('pdfs.partials.pie', [
+        'texto' => 'Los responsables se resuelven por elemento: aprendiz con asignación activa, instructor con préstamo activo, cuenta-dante del ambiente, instructor responsable o almacén.',
+    ])
 </body>
 </html>

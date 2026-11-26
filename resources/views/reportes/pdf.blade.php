@@ -6,27 +6,18 @@
     @include('pdfs.partials.estilos')
 </head>
 <body class="pdf-body">
-    <div class="pdf-header">
-        <h1 class="pdf-title">Reporte #{{ $reporte->id }}</h1>
-        <div class="pdf-subtitle">StockMind - Registro de novedad</div>
-        <div class="pdf-small">Generado: {{ $generado_en?->format('d/m/Y H:i') }}</div>
-    </div>
+    {{-- Datos de identificación del documento. --}}
+    @include('pdfs.partials.cabecera', [
+        'titulo' => "Reporte #{$reporte->id}",
+        'subtitulo' => 'StockMind - Registro de novedad',
+        'generado_en' => $generado_en,
+    ])
 
     <table class="pdf-meta">
         <tr>
             <td class="pdf-label">Aprendiz</td>
-            <td>
-                @if($reporte->apprentice && $reporte->apprentice->user)
-                    {{ trim(collect([
-                        $reporte->apprentice->user->nombre_1,
-                        $reporte->apprentice->user->nombre_2,
-                        $reporte->apprentice->user->apellido_1,
-                        $reporte->apprentice->user->apellido_2,
-                    ])->filter()->implode(' ')) ?: $reporte->apprentice->user->email }}
-                @else
-                    No disponible
-                @endif
-            </td>
+            {{-- El modelo User centraliza el formato del nombre. --}}
+            <td>{{ $reporte->apprentice?->user?->nombre_completo ?? 'No disponible' }}</td>
         </tr>
         <tr>
             <td class="pdf-label">Tipo</td>
@@ -104,9 +95,8 @@
         <img class="pdf-photo" src="{{ $reporte->foto_probatorio }}" alt="Foto probatoria">
     @endif
 
-    <div class="pdf-footer">
-        Responsable actual por prioridad: aprendiz con asignación activa, instructor con préstamo activo,
-        cuenta-dante del ambiente, instructor responsable del ambiente o almacén.
-    </div>
+    @include('pdfs.partials.pie', [
+        'texto' => 'Responsable actual por prioridad: aprendiz con asignación activa, instructor con préstamo activo, cuenta-dante del ambiente, instructor responsable del ambiente o almacén.',
+    ])
 </body>
 </html>

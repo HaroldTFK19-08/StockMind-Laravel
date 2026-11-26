@@ -2,18 +2,13 @@
 
 namespace App\Modules\Auth\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Modules\Shared\Requests\BaseFormRequest;
 
-class LoginRequest extends FormRequest
+class LoginRequest extends BaseFormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * Get the validation rules that apply to the request.
      *
@@ -31,8 +26,8 @@ class LoginRequest extends FormRequest
     {
         return [
             'email.required' => 'El correo es obligatorio.',
-            'email.email' => 'El correo no es válido.',
-            'password.required' => 'La contraseña es obligatoria.',
+            'email.email' => 'El correo no es vÃ¡lido.',
+            'password.required' => 'La contraseÃ±a es obligatoria.',
         ];
     }
 }

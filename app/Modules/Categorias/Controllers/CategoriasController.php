@@ -3,6 +3,7 @@
 namespace App\Modules\Categorias\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Categorias\Facades\CategoriaFacade;
 use App\Modules\Categorias\Requests\ActualizarCategoriaRequest;
 use App\Modules\Categorias\Requests\RegistroCategoriaRequest;
@@ -10,13 +11,15 @@ use Illuminate\Http\JsonResponse;
 
 class CategoriasController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private CategoriaFacade $categoriaFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->categoriaFacade->listar()
         );
     }
@@ -27,17 +30,12 @@ class CategoriasController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Categoría registrada correctamente.',
-            'data' => $categoria,
-        ], 201);
+        return $this->creado('Categoría', $categoria, true);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->categoriaFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->categoriaFacade->mostrar($id));
     }
 
     public function update(
@@ -49,18 +47,13 @@ class CategoriasController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Categoría actualizada correctamente.',
-            'data' => $categoria,
-        ]);
+        return $this->actualizado('Categoría', $categoria, true);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->categoriaFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Categoría eliminada correctamente.',
-        ]);
+        return $this->eliminado('Categoría', true);
     }
 }

@@ -2,37 +2,15 @@
 
 namespace App\Modules\Traslados\Facades;
 
-use App\Modules\Traslados\Models\Transfer;
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Traslados\Services\TrasladoService;
 
-class TrasladoFacade
+class TrasladoFacade extends CrudFacade
 {
-    public function __construct(
-        private TrasladoService $trasladoService
-    ) {}
-
-    public function listar()
+    public function __construct(TrasladoService $trasladoService)
     {
-        return $this->trasladoService->listar();
+        parent::__construct($trasladoService);
     }
 
-    public function mostrar(int $id): Transfer
-    {
-        return $this->trasladoService->mostrar($id);
-    }
-
-    public function crear(array $datos): Transfer
-    {
-        return $this->trasladoService->crear($datos);
-    }
-
-    public function actualizar(int $id, array $datos): Transfer
-    {
-        return $this->trasladoService->actualizar($id, $datos);
-    }
-
-    public function eliminar(int $id): void
-    {
-        $this->trasladoService->eliminar($id);
-    }
 }

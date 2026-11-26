@@ -2,37 +2,15 @@
 
 namespace App\Modules\Ambientes\Facades;
 
-use App\Modules\Ambientes\Models\Environment;
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Ambientes\Services\AmbienteService;
 
-class AmbienteFacade
+class AmbienteFacade extends CrudFacade
 {
-    public function __construct(
-        private AmbienteService $ambienteService
-    ) {}
-
-    public function listar()
+    public function __construct(AmbienteService $ambienteService)
     {
-        return $this->ambienteService->listar();
+        parent::__construct($ambienteService);
     }
 
-    public function mostrar(int $id): array
-    {
-        return $this->ambienteService->mostrar($id);
-    }
-
-    public function crear(array $datos): Environment
-    {
-        return $this->ambienteService->crear($datos);
-    }
-
-    public function actualizar(int $id, array $datos): Environment
-    {
-        return $this->ambienteService->actualizar($id, $datos);
-    }
-
-    public function eliminar(int $id): void
-    {
-        $this->ambienteService->eliminar($id);
-    }
 }

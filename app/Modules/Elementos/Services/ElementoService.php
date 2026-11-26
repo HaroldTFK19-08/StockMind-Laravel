@@ -7,17 +7,32 @@ use App\Modules\Elementos\Models\Element;
 use App\Modules\Prestamos\Models\Loan;
 use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
+use App\Modules\Shared\Services\CacheService;
 use App\Modules\Shared\Services\CloudinaryService;
+use App\Modules\Shared\Services\Concerns\GeneraPdf;
+use App\Modules\Shared\Services\Concerns\GestionaImagenes;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Shared\Services\PDFService;
 use App\Modules\Shared\Services\ResponsablesElementoService;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
-use Throwable;
-use App\Modules\Shared\Services\CacheService;
 
 class ElementoService
 {
+    // El trait aporta pdfVer() y pdfDescargar(); los datos los construye este servicio.
+    use GeneraPdf;
+
+    // Subida, transacción y limpieza de imágenes se comparten con otros servicios.
+    use GestionaImagenes;
+
+    protected function vistaPdf(): string
+    {
+        return 'elementos.pdf';
+    }
+
+    protected function nombrePdf(): string
+    {
+        return 'inventario.pdf';
+    }
+
     public function __construct(
         private CloudinaryService $cloudinaryService,
         private CacheService $cache,
@@ -71,20 +86,15 @@ class ElementoService
             );
         }
 
-        $imagen = $this->cloudinaryService->subir($foto, 'elementos');
-
-        try {
-            $elemento = DB::transaction(function () use ($datos, $imagen) {
-                return Element::create([
-                    ...$datos,
-                    'img_elemento' => $imagen['url'],
-                    'img_elemento_public_id' => $imagen['public_id'],
-                ]);
-            });
-        } catch (Throwable $e) {
-            $this->eliminarImagenSinInterrumpir($imagen['public_id']);
-            throw $e;
-        }
+        $elemento = $this->transaccionConImagen(
+            $foto,
+            'elementos',
+            fn (array $imagen): Element => Element::create([
+                ...$datos,
+                'img_elemento' => $imagen['url'],
+                'img_elemento_public_id' => $imagen['public_id'],
+            ])
+        );
 
         $this->notificarCambioStock(
             $elemento,
@@ -104,31 +114,27 @@ class ElementoService
         $estadoAnterior = $elementoAnterior->estado;
         $foto = $datos['img_elemento'] ?? null;
         unset($datos['img_elemento']);
-        $imagenNueva = null;
 
-        if ($foto instanceof UploadedFile) {
-            $imagenNueva = $this->cloudinaryService->subir($foto, 'elementos');
-            $datos['img_elemento'] = $imagenNueva['url'];
-            $datos['img_elemento_public_id'] = $imagenNueva['public_id'];
-        }
+        $this->transaccionConImagen(
+            $foto,
+            'elementos',
+            function (?array $imagen) use ($id, &$datos) {
+                if ($imagen !== null) {
+                    $datos['img_elemento'] = $imagen['url'];
+                    $datos['img_elemento_public_id'] = $imagen['public_id'];
+                }
 
-        try {
-            DB::transaction(function () use ($id, $datos) {
                 $elemento = Element::query()
                     ->lockForUpdate()
                     ->findOrFail($id);
 
                 $this->validarEstado($elemento, $datos);
                 $elemento->update($datos);
-            });
-        } catch (Throwable $e) {
-            if ($imagenNueva !== null) {
-                $this->eliminarImagenSinInterrumpir($imagenNueva['public_id']);
-            }
+            },
+            $publicIdAnterior
+        );
 
-            throw $e;
-        }
-
+        // Una sola lectura fresca para notificar y responder.
         $elementoActualizado = $this->buscar($id);
 
         if (($datos['estado'] ?? $estadoAnterior) !== $estadoAnterior) {
@@ -139,13 +145,9 @@ class ElementoService
             );
         }
 
-        if ($imagenNueva !== null && $publicIdAnterior) {
-            $this->eliminarImagenSinInterrumpir($publicIdAnterior);
-        }
-
         $this->cache->invalidar('elementos');
 
-        return $this->buscar($id);
+        return $elementoActualizado;
     }
 
     public function eliminar(int $id): void
@@ -169,7 +171,7 @@ class ElementoService
         $this->cache->invalidar('elementos');
 
         if ($publicId) {
-            $this->eliminarImagenSinInterrumpir($publicId);
+            $this->cloudinaryService->eliminarSinInterrumpir($publicId);
         }
     }
 
@@ -250,24 +252,6 @@ class ElementoService
         );
     }
 
-    public function pdfVer()
-    {
-        return $this->pdfService->ver(
-            'elementos.pdf',
-            $this->datosParaPdf(),
-            'inventario.pdf'
-        );
-    }
-
-    public function pdfDescargar()
-    {
-        return $this->pdfService->descargar(
-            'elementos.pdf',
-            $this->datosParaPdf(),
-            'inventario.pdf'
-        );
-    }
-
     /**
      * @return array{elementos: array<int, array<string, mixed>>, total: int, generado_en: \Illuminate\Support\Carbon}
      */
@@ -285,12 +269,4 @@ class ElementoService
         ];
     }
 
-    private function eliminarImagenSinInterrumpir(string $publicId): void
-    {
-        try {
-            $this->cloudinaryService->eliminar($publicId);
-        } catch (Throwable $e) {
-            report($e);
-        }
-    }
 }

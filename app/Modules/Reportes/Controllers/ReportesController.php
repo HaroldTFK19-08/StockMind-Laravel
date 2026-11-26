@@ -3,6 +3,7 @@
 namespace App\Modules\Reportes\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Reportes\Facades\ReporteFacade;
 use App\Modules\Reportes\Requests\ActualizarReporteRequest;
 use App\Modules\Reportes\Requests\RegistroReporteRequest;
@@ -11,13 +12,15 @@ use Illuminate\Http\Response;
 
 class ReportesController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private ReporteFacade $reporteFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->reporteFacade->listar()
         );
     }
@@ -28,17 +31,12 @@ class ReportesController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Reporte registrado correctamente.',
-            'data' => $reporte,
-        ], 201);
+        return $this->creado('Reporte', $reporte);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->reporteFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->reporteFacade->mostrar($id));
     }
 
     public function update(
@@ -50,19 +48,14 @@ class ReportesController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Reporte actualizado correctamente.',
-            'data' => $reporte,
-        ]);
+        return $this->actualizado('Reporte', $reporte);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->reporteFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Reporte eliminado correctamente.',
-        ]);
+        return $this->eliminado('Reporte');
     }
 
     public function pdfDescargar(int $id): Response

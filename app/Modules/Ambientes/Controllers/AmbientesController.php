@@ -3,6 +3,7 @@
 namespace App\Modules\Ambientes\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Ambientes\Facades\AmbienteFacade;
 use App\Modules\Ambientes\Requests\ActualizarAmbienteRequest;
 use App\Modules\Ambientes\Requests\RegistroAmbienteRequest;
@@ -10,13 +11,15 @@ use Illuminate\Http\JsonResponse;
 
 class AmbientesController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private AmbienteFacade $ambienteFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->ambienteFacade->listar()
         );
     }
@@ -27,17 +30,12 @@ class AmbientesController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Ambiente registrado correctamente.',
-            'data' => $ambiente,
-        ], 201);
+        return $this->creado('Ambiente', $ambiente);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->ambienteFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->ambienteFacade->mostrar($id));
     }
 
     public function update(
@@ -49,18 +47,13 @@ class AmbientesController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Ambiente actualizado correctamente.',
-            'data' => $ambiente,
-        ]);
+        return $this->actualizado('Ambiente', $ambiente);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->ambienteFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Ambiente eliminado correctamente.',
-        ]);
+        return $this->eliminado('Ambiente');
     }
 }

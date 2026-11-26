@@ -2,37 +2,15 @@
 
 namespace App\Modules\Sedes\Facades;
 
-use App\Modules\Sedes\Models\Headquarter;
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Sedes\Services\SedeService;
 
-class SedeFacade
+class SedeFacade extends CrudFacade
 {
-    public function __construct(
-        private SedeService $sedeService
-    ) {}
-
-    public function listar()
+    public function __construct(SedeService $sedeService)
     {
-        return $this->sedeService->listar();
+        parent::__construct($sedeService);
     }
 
-    public function mostrar(int $id): array
-    {
-        return $this->sedeService->mostrar($id);
-    }
-
-    public function crear(array $datos): Headquarter
-    {
-        return $this->sedeService->crear($datos);
-    }
-
-    public function actualizar(int $id, array $datos): Headquarter
-    {
-        return $this->sedeService->actualizar($id, $datos);
-    }
-
-    public function eliminar(int $id): void
-    {
-        $this->sedeService->eliminar($id);
-    }
 }

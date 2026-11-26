@@ -2,37 +2,15 @@
 
 namespace App\Modules\Categorias\Facades;
 
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Categorias\Services\CategoriaService;
-use App\Modules\Categorias\Models\Category;
 
-class CategoriaFacade
+class CategoriaFacade extends CrudFacade
 {
-    public function __construct(
-        private CategoriaService $categoriaService
-    ) {}
-
-    public function listar()
+    public function __construct(CategoriaService $categoriaService)
     {
-        return $this->categoriaService->listar();
+        parent::__construct($categoriaService);
     }
 
-    public function mostrar(int $id): array
-    {
-        return $this->categoriaService->mostrar($id);
-    }
-
-    public function crear(array $datos): Category
-    {
-        return $this->categoriaService->crear($datos);
-    }
-
-    public function actualizar(int $id, array $datos): Category
-    {
-        return $this->categoriaService->actualizar($id, $datos);
-    }
-
-    public function eliminar(int $id): void
-    {
-        $this->categoriaService->eliminar($id);
-    }
 }

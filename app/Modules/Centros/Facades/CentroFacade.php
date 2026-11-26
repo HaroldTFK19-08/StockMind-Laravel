@@ -2,33 +2,15 @@
 
 namespace App\Modules\Centros\Facades;
 
-use App\Modules\Centros\Models\Trainingcenter;
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Centros\Services\CentroService;
 
-class CentroFacade
+class CentroFacade extends CrudFacade
 {
-    public function __construct(
-        private CentroService $centroService
-    ) {}
+    public function __construct(CentroService $centroService)
+    {
+        parent::__construct($centroService);
+    }
 
-    public function listar()
-    {
-        return $this->centroService->listar();
-    }
-    public function mostrar(int $id): array
-    {
-        return $this->centroService->mostrar($id);
-    }
-    public function crear(array $datos): Trainingcenter
-    {
-        return $this->centroService->crear($datos);
-    }
-    public function actualizar(int $id, array $datos): Trainingcenter
-    {
-        return $this->centroService->actualizar($id, $datos);
-    }
-    public function eliminar(int $id): void
-    {
-        $this->centroService->eliminar($id);
-    }
 }

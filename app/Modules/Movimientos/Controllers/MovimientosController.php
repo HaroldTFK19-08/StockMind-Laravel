@@ -3,6 +3,7 @@
 namespace App\Modules\Movimientos\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Movimientos\Facades\MovimientoFacade;
 use App\Modules\Movimientos\Requests\ActualizarMovimientoRequest;
 use App\Modules\Movimientos\Requests\RegistroMovimientoRequest;
@@ -10,13 +11,15 @@ use Illuminate\Http\JsonResponse;
 
 class MovimientosController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private MovimientoFacade $movimientoFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->movimientoFacade->listar()
         );
     }
@@ -27,17 +30,12 @@ class MovimientosController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Movimiento registrado correctamente.',
-            'data' => $movimiento,
-        ], 201);
+        return $this->creado('Movimiento', $movimiento);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->movimientoFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->movimientoFacade->mostrar($id));
     }
 
     public function update(
@@ -49,18 +47,13 @@ class MovimientosController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Movimiento actualizado correctamente.',
-            'data' => $movimiento,
-        ]);
+        return $this->actualizado('Movimiento', $movimiento);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->movimientoFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Movimiento eliminado correctamente.',
-        ]);
+        return $this->eliminado('Movimiento');
     }
 }

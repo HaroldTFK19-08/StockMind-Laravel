@@ -3,6 +3,7 @@
 namespace App\Modules\Elementos\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Elementos\Facades\ElementoFacade;
 use App\Modules\Elementos\Requests\ActualizarElementoRequest;
 use App\Modules\Elementos\Requests\RegistroElementoRequest;
@@ -11,13 +12,15 @@ use Illuminate\Http\Response;
 
 class ElementosController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private ElementoFacade $elementoFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->elementoFacade->listar()
         );
     }
@@ -28,17 +31,12 @@ class ElementosController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Elemento registrado correctamente.',
-            'data' => $elemento,
-        ], 201);
+        return $this->creado('Elemento', $elemento);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->elementoFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->elementoFacade->mostrar($id));
     }
 
     public function update(
@@ -50,19 +48,14 @@ class ElementosController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Elemento actualizado correctamente.',
-            'data' => $elemento,
-        ]);
+        return $this->actualizado('Elemento', $elemento);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->elementoFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Elemento eliminado correctamente.',
-        ]);
+        return $this->eliminado('Elemento');
     }
 
     public function pdfVer(): Response

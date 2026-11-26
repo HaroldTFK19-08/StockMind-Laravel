@@ -76,6 +76,23 @@ class User extends Authenticatable
             ->whereIn('rol', is_array($roles) ? $roles : [$roles])
             ->exists();
     }
+
+    /**
+     * Nombre legible para documentos y notificaciones.
+     * Si no hay nombres cargados, se usa el correo para no dejar la celda vacía.
+     */
+    public function getNombreCompletoAttribute(): string
+    {
+        $nombre = trim(collect([
+            $this->nombre_1,
+            $this->nombre_2,
+            $this->apellido_1,
+            $this->apellido_2,
+        ])->filter()->implode(' '));
+
+        return $nombre !== '' ? $nombre : $this->email;
+    }
+
     public function apprentice(): HasOne
     {
         return $this->hasOne(Apprentice::class, 'user_id');

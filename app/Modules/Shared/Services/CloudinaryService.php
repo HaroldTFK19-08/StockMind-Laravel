@@ -53,6 +53,23 @@ class CloudinaryService
             );
         }
     }
+    /**
+     * Limpieza tolerante a fallos: se usa en rollback y al reemplazar imágenes.
+     * Nunca debe interrumpir la operación de negocio que ya terminó.
+     */
+    public function eliminarSinInterrumpir(?string $publicId): void
+    {
+        if ($publicId === null || $publicId === '') {
+            return;
+        }
+
+        try {
+            $this->eliminar($publicId);
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
     public function eliminar(string $publicId): void
     {
         try {

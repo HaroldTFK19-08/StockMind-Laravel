@@ -102,20 +102,41 @@ class ResponsablesElementoService
         ];
     }
 
+    /**
+     * Delegamos el formato al modelo para no repetir la concatenación
+     * en servicios, reportes ni vistas PDF.
+     */
     public static function nombreCompleto(?User $usuario): ?string
     {
-        if ($usuario === null) {
-            return null;
-        }
+        return $usuario?->nombre_completo;
+    }
 
-        $nombre = trim(collect([
-            $usuario->nombre_1,
-            $usuario->nombre_2,
-            $usuario->apellido_1,
-            $usuario->apellido_2,
-        ])->filter()->implode(' '));
+    /**
+     * Suma el uso de varias fichas. El listado de reportes dejó de repetir
+     * seis array_sum() y delega aquí el mismo cálculo.
+     *
+     * @param  array<int, array<string, mixed>>  $fichas
+     * @return array<string, int>
+     */
+    public function sumarUso(array $fichas): array
+    {
+        $claves = [
+            'asignaciones',
+            'asignaciones_activas',
+            'prestamos',
+            'prestamos_activos',
+            'movimientos',
+            'reportes',
+        ];
+        $usos = array_column($fichas, 'uso');
 
-        return $nombre === '' ? $usuario->email : $nombre;
+        return array_combine(
+            $claves,
+            array_map(
+                static fn (string $clave): int => array_sum(array_column($usos, $clave)),
+                $claves
+            )
+        );
     }
 
     /**
@@ -136,11 +157,8 @@ class ResponsablesElementoService
 
     private function relacion(Model $modelo, string $relacion): Collection
     {
-        if (! $modelo->relationLoaded($relacion)) {
-            $modelo->loadMissing($relacion);
-        }
-
-        return $modelo->getRelation($relacion);
+        // loadMissing() no recarga una relación ya cargada: evita el if previo.
+        return $modelo->loadMissing($relacion)->getRelation($relacion);
     }
 
     /**
@@ -155,57 +173,42 @@ class ResponsablesElementoService
         $asignacionActiva = $asignaciones->first(
             fn ($asignacion) => in_array($asignacion->estado, self::ESTADOS_ASIGNACION_ACTIVA, true)
         );
-        $aprendiz = $asignacionActiva?->apprentice?->user;
-
-        if ($aprendiz !== null) {
-            return [
-                'nombre' => self::nombreCompleto($aprendiz) ?? 'Aprendiz',
-                'tipo' => 'Aprendiz con asignación activa',
-            ];
-        }
-
         $prestamoActivo = $prestamos->first(
             fn ($prestamo) => in_array($prestamo->estado, self::ESTADOS_PRESTAMO_ACTIVO, true)
         );
-        $instructorPrestamo = $prestamoActivo?->teacher?->user;
-
-        if ($instructorPrestamo !== null) {
-            return [
-                'nombre' => self::nombreCompleto($instructorPrestamo) ?? 'Instructor',
-                'tipo' => 'Instructor con préstamo activo',
-            ];
-        }
-
         $cuentaVigente = $cuentas->first(fn ($cuenta) => $cuenta->fecha_fin === null);
-        $cuentadante = $cuentaVigente?->user;
 
-        if ($cuentadante !== null) {
-            return [
-                'nombre' => self::nombreCompleto($cuentadante) ?? 'Cuenta-dante',
-                'tipo' => 'Cuenta-dante del ambiente',
-            ];
-        }
-
-        $instructorAmbiente = $elemento->environment?->teacher?->user;
-
-        if ($instructorAmbiente !== null) {
-            return [
-                'nombre' => self::nombreCompleto($instructorAmbiente) ?? 'Instructor',
-                'tipo' => 'Instructor responsable del ambiente',
-            ];
-        }
-
-        if ($elemento->warehouse !== null) {
-            return [
-                'nombre' => $elemento->warehouse->nombre,
-                'tipo' => 'Almacén',
-            ];
-        }
-
-        return [
-            'nombre' => 'Sin responsable registrado',
-            'tipo' => 'Sin asignar',
+        // Cadena de prioridad: asignación > préstamo > cuenta DANTE > instructor > almacén.
+        return $this->responsable(
+            $asignacionActiva?->apprentice?->user,
+            'Aprendiz',
+            'Aprendiz con asignación activa'
+        ) ?? $this->responsable(
+            $prestamoActivo?->teacher?->user,
+            'Instructor',
+            'Instructor con préstamo activo'
+        ) ?? $this->responsable(
+            $cuentaVigente?->user,
+            'Cuenta-dante',
+            'Cuenta-dante del ambiente'
+        ) ?? $this->responsable(
+            $elemento->environment?->teacher?->user,
+            'Instructor',
+            'Instructor responsable del ambiente'
+        ) ?? [
+            'nombre' => $elemento->warehouse?->nombre ?? 'Sin responsable registrado',
+            'tipo' => $elemento->warehouse !== null ? 'Almacén' : 'Sin asignar',
         ];
+    }
+
+    /** @return array{nombre: string, tipo: string}|null */
+    private function responsable(?User $usuario, string $fallback, string $tipo): ?array
+    {
+        if ($usuario === null) {
+            return null;
+        }
+
+        return ['nombre' => self::nombreCompleto($usuario) ?? $fallback, 'tipo' => $tipo];
     }
 
     /**
@@ -217,18 +220,16 @@ class ResponsablesElementoService
         Collection $movimientos,
         Collection $reportes
     ): array {
-        $asignacionesActivas = $asignaciones->filter(
-            fn ($asignacion) => in_array($asignacion->estado, self::ESTADOS_ASIGNACION_ACTIVA, true)
-        );
-        $prestamosActivos = $prestamos->filter(
-            fn ($prestamo) => in_array($prestamo->estado, self::ESTADOS_PRESTAMO_ACTIVO, true)
-        );
+        // Un único contador paramétrico reemplaza los dos filtros duplicados.
+        $activos = static fn (Collection $items, array $estados): int => $items
+            ->filter(fn ($item) => in_array($item->estado, $estados, true))
+            ->count();
 
         return [
             'asignaciones' => $asignaciones->count(),
-            'asignaciones_activas' => $asignacionesActivas->count(),
+            'asignaciones_activas' => $activos($asignaciones, self::ESTADOS_ASIGNACION_ACTIVA),
             'prestamos' => $prestamos->count(),
-            'prestamos_activos' => $prestamosActivos->count(),
+            'prestamos_activos' => $activos($prestamos, self::ESTADOS_PRESTAMO_ACTIVO),
             'movimientos' => $movimientos->count(),
             'reportes' => $reportes->count(),
             'ultima_asignacion' => $this->ultimaFecha($asignaciones, 'fecha_asignacion'),

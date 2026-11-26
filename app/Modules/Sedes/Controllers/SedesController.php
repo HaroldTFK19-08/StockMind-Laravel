@@ -3,6 +3,7 @@
 namespace App\Modules\Sedes\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Sedes\Facades\SedeFacade;
 use App\Modules\Sedes\Requests\ActualizarSedeRequest;
 use App\Modules\Sedes\Requests\RegistroSedeRequest;
@@ -10,13 +11,15 @@ use Illuminate\Http\JsonResponse;
 
 class SedesController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private SedeFacade $sedeFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->sedeFacade->listar()
         );
     }
@@ -27,17 +30,12 @@ class SedesController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Sede registrada correctamente.',
-            'data' => $sede,
-        ], 201);
+        return $this->creado('Sede', $sede, true);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->sedeFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->sedeFacade->mostrar($id));
     }
 
     public function update(
@@ -49,18 +47,13 @@ class SedesController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Sede actualizada correctamente.',
-            'data' => $sede,
-        ]);
+        return $this->actualizado('Sede', $sede, true);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->sedeFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Sede eliminada correctamente.',
-        ]);
+        return $this->eliminado('Sede', true);
     }
 }

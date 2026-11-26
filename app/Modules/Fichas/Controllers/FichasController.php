@@ -3,6 +3,7 @@
 namespace App\Modules\Fichas\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Fichas\Facades\FichaFacade;
 use App\Modules\Fichas\Requests\ActualizarFichaRequest;
 use App\Modules\Fichas\Requests\RegistroFichaRequest;
@@ -10,13 +11,15 @@ use Illuminate\Http\JsonResponse;
 
 class FichasController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private FichaFacade $fichaFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->fichaFacade->listar()
         );
     }
@@ -27,17 +30,12 @@ class FichasController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Ficha registrada correctamente.',
-            'data' => $ficha,
-        ], 201);
+        return $this->creado('Ficha', $ficha, true);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->fichaFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->fichaFacade->mostrar($id));
     }
 
     public function update(
@@ -49,18 +47,13 @@ class FichasController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Ficha actualizada correctamente.',
-            'data' => $ficha,
-        ]);
+        return $this->actualizado('Ficha', $ficha, true);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->fichaFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Ficha eliminada correctamente.',
-        ]);
+        return $this->eliminado('Ficha', true);
     }
 }

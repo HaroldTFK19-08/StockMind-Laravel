@@ -2,40 +2,20 @@
 
 namespace App\Modules\Usuarios\Facades;
 
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Usuarios\Models\User;
 use App\Modules\Usuarios\Services\UsuarioService;
 
-class UsuarioFacade
+class UsuarioFacade extends CrudFacade
 {
-    public function __construct(
-        private UsuarioService $usuarioService
-    ) {}
-
-    public function listar()
+    public function __construct(UsuarioService $usuarioService)
     {
-        return $this->usuarioService->listar();
-    }
-
-    public function mostrar(int $id): User
-    {
-        return $this->usuarioService->mostrar($id);
-    }
-
-    public function crear(array $datos): User
-    {
-        return $this->usuarioService->crear($datos);
+        parent::__construct($usuarioService);
     }
 
     /**
      * @return array{usuario: User, token: string|null}
      */
-    public function actualizar(int $id, array $datos): array
-    {
-        return $this->usuarioService->actualizar($id, $datos);
-    }
 
-    public function eliminar(int $id): void
-    {
-        $this->usuarioService->eliminar($id);
-    }
 }

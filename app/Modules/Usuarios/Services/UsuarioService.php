@@ -8,15 +8,16 @@ use App\Modules\Shared\Enums\EstadoUsuario;
 use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use App\Modules\Shared\Services\CloudinaryService;
+use App\Modules\Shared\Services\Concerns\GestionaImagenes;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Roles\Models\Rol;
 use App\Modules\Usuarios\Models\User;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
-use Throwable;
 
 class UsuarioService
 {
+    // Subida, transacción y limpieza de imágenes se comparten con otros servicios.
+    use GestionaImagenes;
+
     public function __construct(
         private CloudinaryService $cloudinaryService,
         private AuthFacade $authFacade,
@@ -57,10 +58,10 @@ class UsuarioService
 
         $rolesAsignados = $this->rolFacade->filtrarParaAsignacion($roleIds);
 
-        $imagen = $this->cloudinaryService->subir($foto, 'usuarios');
-
-        try {
-            $usuario = DB::transaction(function () use ($datos, $roleIds, $rolesAsignados, $imagen) {
+        $usuario = $this->transaccionConImagen(
+            $foto,
+            'usuarios',
+            function (array $imagen) use ($datos, $roleIds, $rolesAsignados): User {
                 $usuario = User::create([
                     ...$datos,
                     'foto_perfil' => $imagen['url'],
@@ -71,11 +72,8 @@ class UsuarioService
                 $this->notificarRolesAsignados($usuario, $rolesAsignados);
 
                 return $usuario;
-            });
-        } catch (Throwable $e) {
-            $this->eliminarImagenSinInterrumpir($imagen['public_id']);
-            throw $e;
-        }
+            }
+        );
 
         return $this->mostrar($usuario->id);
     }
@@ -90,18 +88,11 @@ class UsuarioService
         $foto = $datos['foto_perfil'] ?? null;
         $roleIds = $datos['role_ids'] ?? null;
         unset($datos['foto_perfil'], $datos['role_ids'], $datos['password_confirmation']);
-        $imagenNueva = null;
         $rolesAsignados = null;
         $rolesAnteriores = $usuario->roles()->pluck('rol')->sort()->values()->all();
 
         if ($roleIds !== null) {
             $rolesAsignados = $this->rolFacade->filtrarParaAsignacion($roleIds);
-        }
-
-        if ($foto instanceof UploadedFile) {
-            $imagenNueva = $this->cloudinaryService->subir($foto, 'usuarios');
-            $datos['foto_perfil'] = $imagenNueva['url'];
-            $datos['foto_perfil_public_id'] = $imagenNueva['public_id'];
         }
 
         // Asignar el rol a una cuenta pendiente la activa y entrega su token.
@@ -113,15 +104,22 @@ class UsuarioService
             $datos['estado'] = EstadoUsuario::Activo->value;
         }
 
-        try {
-            $tokenNuevo = DB::transaction(function () use (
+        $tokenNuevo = $this->transaccionConImagen(
+            $foto,
+            'usuarios',
+            function (?array $imagen) use (
                 $usuario,
-                $datos,
+                &$datos,
                 $roleIds,
                 $rolesAsignados,
                 $rolesAnteriores,
                 $activarAlAsignarRol
             ) {
+                if ($imagen !== null) {
+                    $datos['foto_perfil'] = $imagen['url'];
+                    $datos['foto_perfil_public_id'] = $imagen['public_id'];
+                }
+
                 $usuario->update($datos);
 
                 if ($roleIds !== null) {
@@ -140,18 +138,9 @@ class UsuarioService
                 return $activarAlAsignarRol
                     ? $this->authFacade->activarCuenta($usuario)
                     : null;
-            });
-        } catch (Throwable $e) {
-            if ($imagenNueva !== null) {
-                $this->eliminarImagenSinInterrumpir($imagenNueva['public_id']);
-            }
-
-            throw $e;
-        }
-
-        if ($imagenNueva !== null && $publicIdAnterior) {
-            $this->eliminarImagenSinInterrumpir($publicIdAnterior);
-        }
+            },
+            $publicIdAnterior
+        );
 
         return [
             'usuario' => $this->mostrar($id),
@@ -177,7 +166,7 @@ class UsuarioService
         $usuario->delete();
 
         if ($publicId) {
-            $this->eliminarImagenSinInterrumpir($publicId);
+            $this->cloudinaryService->eliminarSinInterrumpir($publicId);
         }
     }
 
@@ -204,14 +193,6 @@ class UsuarioService
         );
     }
 
-    private function eliminarImagenSinInterrumpir(string $publicId): void
-    {
-        try {
-            $this->cloudinaryService->eliminar($publicId);
-        } catch (Throwable $e) {
-            report($e);
-        }
-    }
 
     private function validarRolesDePerfiles(User $usuario, array $roleIds): void
     {

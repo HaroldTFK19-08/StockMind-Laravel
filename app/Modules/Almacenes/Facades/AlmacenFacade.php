@@ -2,37 +2,15 @@
 
 namespace App\Modules\Almacenes\Facades;
 
-use App\Modules\Almacenes\Models\Warehouse;
+use App\Modules\Shared\Facades\CrudFacade;
+
 use App\Modules\Almacenes\Services\AlmacenService;
 
-class AlmacenFacade
+class AlmacenFacade extends CrudFacade
 {
-    public function __construct(
-        private AlmacenService $almacenService
-    ) {}
-
-    public function listar()
+    public function __construct(AlmacenService $almacenService)
     {
-        return $this->almacenService->listar();
+        parent::__construct($almacenService);
     }
 
-    public function mostrar(int $id): array
-    {
-        return $this->almacenService->mostrar($id);
-    }
-
-    public function crear(array $datos): Warehouse
-    {
-        return $this->almacenService->crear($datos);
-    }
-
-    public function actualizar(int $id, array $datos): Warehouse
-    {
-        return $this->almacenService->actualizar($id, $datos);
-    }
-
-    public function eliminar(int $id): void
-    {
-        $this->almacenService->eliminar($id);
-    }
 }

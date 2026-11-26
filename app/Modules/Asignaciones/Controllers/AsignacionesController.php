@@ -3,6 +3,7 @@
 namespace App\Modules\Asignaciones\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Shared\Controllers\Concerns\RespondeApi;
 use App\Modules\Asignaciones\Facades\AsignacionFacade;
 use App\Modules\Asignaciones\Requests\ActualizarAsignacionRequest;
 use App\Modules\Asignaciones\Requests\RegistroAsignacionRequest;
@@ -11,13 +12,15 @@ use Illuminate\Http\Response;
 
 class AsignacionesController extends Controller
 {
+    use RespondeApi;
+
     public function __construct(
         private AsignacionFacade $asignacionFacade
     ) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(
+        return $this->listado(
             $this->asignacionFacade->listar()
         );
     }
@@ -28,17 +31,12 @@ class AsignacionesController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Asignación registrada correctamente.',
-            'data' => $asignacion,
-        ], 201);
+        return $this->creado('Asignación', $asignacion, true);
     }
 
     public function show(int $id): JsonResponse
     {
-        return response()->json([
-            'data' => $this->asignacionFacade->mostrar($id),
-        ]);
+        return $this->detalle($this->asignacionFacade->mostrar($id));
     }
 
     public function update(
@@ -50,19 +48,14 @@ class AsignacionesController extends Controller
             $request->validated()
         );
 
-        return response()->json([
-            'message' => 'Asignación actualizada correctamente.',
-            'data' => $asignacion,
-        ]);
+        return $this->actualizado('Asignación', $asignacion, true);
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->asignacionFacade->eliminar($id);
 
-        return response()->json([
-            'message' => 'Asignación eliminada correctamente.',
-        ]);
+        return $this->eliminado('Asignación', true);
     }
 
     public function pdfVer(): Response

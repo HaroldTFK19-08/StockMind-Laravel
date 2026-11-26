@@ -7,13 +7,13 @@
     <style>@page { size: a4 landscape; }</style>
 </head>
 <body class="pdf-body">
-    <div class="pdf-header">
-        <h1 class="pdf-title">Asignaciones de elementos</h1>
-        <div class="pdf-subtitle">StockMind - Responsables y uso por asignación</div>
-        <div class="pdf-small">
-            Total: {{ $total }} · Generado: {{ $generado_en?->format('d/m/Y H:i') }}
-        </div>
-    </div>
+    {{-- Datos de identificación del documento. --}}
+    @include('pdfs.partials.cabecera', [
+        'titulo' => 'Asignaciones de elementos',
+        'subtitulo' => 'StockMind - Responsables y uso por asignación',
+        'total' => $total,
+        'generado_en' => $generado_en,
+    ])
 
     <table class="pdf-table">
         <thead>
@@ -63,9 +63,8 @@
         </tbody>
     </table>
 
-    <div class="pdf-footer">
-        El responsable actual se calcula sobre el elemento asignado. El uso incluye el histórico de
-        asignaciones, préstamos, movimientos y reportes de ese elemento.
-    </div>
+    @include('pdfs.partials.pie', [
+        'texto' => 'El responsable actual se calcula sobre el elemento asignado. El uso incluye el histórico de asignaciones, préstamos, movimientos y reportes de ese elemento.',
+    ])
 </body>
 </html>
