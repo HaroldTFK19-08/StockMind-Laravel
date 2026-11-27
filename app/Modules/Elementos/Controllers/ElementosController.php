@@ -21,6 +21,20 @@ class ElementosController extends Controller
         );
     }
 
+    public function historial(string $codigo): JsonResponse
+    {
+        return response()->json([
+            'data' => $this->elementoFacade->historial($codigo),
+        ]);
+    }
+
+    public function inventarioPorSedeAlmacenCategoria(): JsonResponse
+    {
+        return response()->json([
+            'data' => $this->elementoFacade->inventarioPorSedeAlmacenCategoria(),
+        ]);
+    }
+
     public function store(RegistroElementoRequest $request): JsonResponse
     {
         $elemento = $this->elementoFacade->crear(

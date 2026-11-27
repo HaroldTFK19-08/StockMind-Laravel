@@ -16,6 +16,11 @@ class UsuarioFacade
         return $this->usuarioService->listar();
     }
 
+    public function listarConPerfiles()
+    {
+        return $this->usuarioService->listarConPerfiles();
+    }
+
     public function mostrar(int $id): User
     {
         return $this->usuarioService->mostrar($id);

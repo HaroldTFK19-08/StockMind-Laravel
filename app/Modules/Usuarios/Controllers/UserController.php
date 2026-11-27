@@ -21,6 +21,13 @@ class UserController extends Controller
         );
     }
 
+    public function indexConPerfiles(): JsonResponse
+    {
+        return response()->json(
+            $this->usuarioFacade->listarConPerfiles()
+        );
+    }
+
     public function store(RegistroUsuarioRequest $request): JsonResponse
     {
         $usuario = $this->usuarioFacade->crear(
@@ -50,7 +57,6 @@ class UserController extends Controller
         );
 
         return response()->json([
-            'message' => 'Usuario actualizado correctamente.',
             'data' => $usuario,
         ]);
     }

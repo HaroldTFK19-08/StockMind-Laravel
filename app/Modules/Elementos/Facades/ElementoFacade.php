@@ -16,6 +16,16 @@ class ElementoFacade
         return $this->elementoService->listar();
     }
 
+    public function historial(string $codigo): array
+    {
+        return $this->elementoService->historial($codigo);
+    }
+
+    public function inventarioPorSedeAlmacenCategoria()
+    {
+        return $this->elementoService->inventarioPorSedeAlmacenCategoria();
+    }
+
     public function mostrar(int $id): Element
     {
         return $this->elementoService->mostrar($id);

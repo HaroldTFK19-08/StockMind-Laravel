@@ -29,6 +29,27 @@ class UsuarioService
             ->paginate(10);
     }
 
+    public function listarConPerfiles()
+    {
+        return User::query()
+            ->select(['id', 'nombre_1', 'nombre_2', 'apellido_1', 'apellido_2', 'estado'])
+            ->with([
+                'apprentice:id,user_id,coursegroup_id,estado',
+                'apprentice.coursegroup:id,codigo,programa',
+                'teacher:id,user_id,tipo_instructor,especialidad',
+                'danteaccounts:id,user_id,environment_id,fecha_inicio,fecha_fin',
+                'danteaccounts.environment:id,nombre,headquarter_id',
+            ])
+            ->where(function ($query) {
+                $query->whereHas('apprentice')
+                    ->orWhereHas('teacher')
+                    ->orWhereHas('danteaccounts');
+            })
+            ->orderBy('apellido_1')
+            ->orderBy('nombre_1')
+            ->paginate(20);
+    }
+
     public function mostrar(int $id): User
     {
         return User::with([
