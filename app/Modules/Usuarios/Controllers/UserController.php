@@ -24,6 +24,14 @@ class UserController extends Controller
         );
     }
 
+    public function indexConPerfiles(): JsonResponse
+    {
+        // Endpoint de consultas de kevin: mantiene la clave "data" de su contrato.
+        return response()->json([
+            'data' => $this->usuarioFacade->listarConPerfiles(),
+        ]);
+    }
+
     public function store(RegistroUsuarioRequest $request): JsonResponse
     {
         $usuario = $this->usuarioFacade->crear(

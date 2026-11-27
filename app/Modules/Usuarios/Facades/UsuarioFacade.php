@@ -3,8 +3,6 @@
 namespace App\Modules\Usuarios\Facades;
 
 use App\Modules\Shared\Facades\CrudFacade;
-
-use App\Modules\Usuarios\Models\User;
 use App\Modules\Usuarios\Services\UsuarioService;
 
 class UsuarioFacade extends CrudFacade
@@ -14,8 +12,8 @@ class UsuarioFacade extends CrudFacade
         parent::__construct($usuarioService);
     }
 
-    /**
-     * @return array{usuario: User, token: string|null}
-     */
-
+    public function listarConPerfiles()
+    {
+        return $this->servicio->listarConPerfiles();
+    }
 }

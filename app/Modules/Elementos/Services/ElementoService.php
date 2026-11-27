@@ -74,6 +74,76 @@ class ElementoService
             ->findOrFail($id);
     }
 
+    public function historial(string $codigo): array
+    {
+        $elemento = Element::query()
+            ->select(['id', 'codigo_inventario', 'nombre'])
+            ->where('codigo_inventario', $codigo)
+            ->with([
+                'loans.teacher.user:id,nombre_1,nombre_2,apellido_1,apellido_2',
+                'assignments.apprentice.user:id,nombre_1,nombre_2,apellido_1,apellido_2',
+                'assignments.teacher.user:id,nombre_1,nombre_2,apellido_1,apellido_2',
+            ])
+            ->firstOrFail();
+
+        $nombre = static fn ($usuario): string => collect([
+            $usuario->nombre_1,
+            $usuario->nombre_2,
+            $usuario->apellido_1,
+            $usuario->apellido_2,
+        ])->filter()->implode(' ');
+
+        $prestamos = $elemento->loans->map(fn ($prestamo) => [
+            'tipo' => 'Préstamo',
+            'persona' => $nombre($prestamo->teacher->user),
+            'tipo_persona' => 'Instructor',
+            'instructor_responsable' => null,
+            'fecha_entrega' => $prestamo->fecha_prestamo,
+            'fecha_devolucion_esperada' => $prestamo->fecha_devolucion_esperada,
+            'fecha_devolucion_real' => $prestamo->fecha_devolucion_real,
+            'estado' => $prestamo->estado,
+            'observaciones' => $prestamo->observaciones,
+        ]);
+
+        $asignaciones = $elemento->assignments->map(fn ($asignacion) => [
+            'tipo' => 'Asignación',
+            'persona' => $nombre($asignacion->apprentice->user),
+            'tipo_persona' => 'Aprendiz',
+            'instructor_responsable' => $nombre($asignacion->teacher->user),
+            'fecha_entrega' => $asignacion->fecha_asignacion,
+            'fecha_devolucion_esperada' => $asignacion->fecha_devolucion_esperada,
+            'fecha_devolucion_real' => $asignacion->fecha_devolucion_real,
+            'estado' => $asignacion->estado,
+            'observaciones' => $asignacion->observaciones,
+        ]);
+
+        return [
+            'elemento' => $elemento->only(['codigo_inventario', 'nombre']),
+            'historial' => $prestamos->concat($asignaciones)
+                ->sortByDesc('fecha_entrega')
+                ->values()
+                ->all(),
+        ];
+    }
+
+    public function inventarioPorSedeAlmacenCategoria()
+    {
+        return Element::query()
+            ->join('warehouses as w', 'w.id', '=', 'elements.warehouse_id')
+            ->join('headquarters as h', 'h.id', '=', 'w.headquarter_id')
+            ->join('categories as c', 'c.id', '=', 'elements.category_id')
+            ->selectRaw(
+                'h.id as sede_id, h.nombre as sede, w.id as almacen_id, ' .
+                'w.nombre as almacen, c.id as categoria_id, c.nombre as categoria, COUNT(*) as cantidad'
+            )
+            ->groupBy(['h.id', 'h.nombre', 'w.id', 'w.nombre', 'c.id', 'c.nombre'])
+            ->orderBy('h.nombre')
+            ->orderBy('w.nombre')
+            ->orderBy('c.nombre')
+            ->toBase()
+            ->get();
+    }
+
     public function crear(array $datos): Element
     {
         $foto = $datos['img_elemento'];
