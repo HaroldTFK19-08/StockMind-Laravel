@@ -31,7 +31,7 @@ class UserController extends Controller
             'data' => $this->usuarioFacade->listarConPerfiles(),
         ]);
     }
-
+    //parte de registro
     public function store(RegistroUsuarioRequest $request): JsonResponse
     {
         $usuario = $this->usuarioFacade->crear(
