@@ -17,14 +17,12 @@ class UsuarioService
 {
     // Subida, transacción y limpieza de imágenes se comparten con otros servicios.
     use GestionaImagenes;
-
     public function __construct(
         private CloudinaryService $cloudinaryService,
         private AuthFacade $authFacade,
         private RolFacade $rolFacade,
         private NotificacionService $notificacionService
     ) {}
-
     public function listar()
     {
         return User::with([
@@ -37,7 +35,6 @@ class UsuarioService
             ->latest()
             ->paginate(10);
     }
-
     public function listarConPerfiles()
     {
         return User::query()
@@ -59,7 +56,6 @@ class UsuarioService
             // El endpoint de consultas devuelve la lista directa dentro de "data".
             ->get();
     }
-
     public function mostrar(int $id): User
     {
         return User::with([
@@ -71,15 +67,12 @@ class UsuarioService
             ->withCount('danteaccounts')
             ->findOrFail($id);
     }
-
     public function crear(array $datos): User
     {
         $foto = $datos['foto_perfil'];
         $roleIds = $datos['role_ids'];
         unset($datos['foto_perfil'], $datos['role_ids'], $datos['password_confirmation']);
-
         $rolesAsignados = $this->rolFacade->filtrarParaAsignacion($roleIds);
-
         $usuario = $this->transaccionConImagen(
             $foto,
             'usuarios',
@@ -90,16 +83,12 @@ class UsuarioService
                     'foto_perfil_public_id' => $imagen['public_id'],
                 ]);
                 $usuario->roles()->sync($roleIds);
-
                 $this->notificarRolesAsignados($usuario, $rolesAsignados);
-
                 return $usuario;
             }
         );
-
         return $this->mostrar($usuario->id);
     }
-
     /**
      * @return array{usuario: User, token: string|null}
      */
@@ -112,20 +101,16 @@ class UsuarioService
         unset($datos['foto_perfil'], $datos['role_ids'], $datos['password_confirmation']);
         $rolesAsignados = null;
         $rolesAnteriores = $usuario->roles()->pluck('rol')->sort()->values()->all();
-
         if ($roleIds !== null) {
             $rolesAsignados = $this->rolFacade->filtrarParaAsignacion($roleIds);
         }
-
         // Asignar el rol a una cuenta pendiente la activa y entrega su token.
         $activarAlAsignarRol = $roleIds !== null
             && $usuario->estado === EstadoUsuario::Pendiente->value
             && ($datos['estado'] ?? null) !== EstadoUsuario::Inactivo->value;
-
         if ($activarAlAsignarRol) {
             $datos['estado'] = EstadoUsuario::Activo->value;
         }
-
         $tokenNuevo = $this->transaccionConImagen(
             $foto,
             'usuarios',
@@ -141,39 +126,31 @@ class UsuarioService
                     $datos['foto_perfil'] = $imagen['url'];
                     $datos['foto_perfil_public_id'] = $imagen['public_id'];
                 }
-
                 $usuario->update($datos);
-
                 if ($roleIds !== null) {
                     $this->validarRolesDePerfiles($usuario, $roleIds);
                     $usuario->roles()->sync($roleIds);
-
                     if ($rolesAsignados !== $rolesAnteriores) {
                         $this->notificarRolesAsignados($usuario, $rolesAsignados);
                     }
                 }
-
                 if (($datos['estado'] ?? null) === EstadoUsuario::Inactivo->value) {
                     $usuario->tokens()->delete();
                 }
-
                 return $activarAlAsignarRol
                     ? $this->authFacade->activarCuenta($usuario)
                     : null;
             },
             $publicIdAnterior
         );
-
         return [
             'usuario' => $this->mostrar($id),
             'token' => $tokenNuevo,
         ];
     }
-
     public function eliminar(int $id): void
     {
         $usuario = $this->mostrar($id);
-
         if (
             $usuario->apprentice()->exists()
             || $usuario->teacher()->exists()
@@ -183,15 +160,12 @@ class UsuarioService
                 'No se puede eliminar el usuario porque tiene perfiles o cuentas DANTE asociados.'
             );
         }
-
         $publicId = $usuario->foto_perfil_public_id;
         $usuario->delete();
-
         if ($publicId) {
             $this->cloudinaryService->eliminarSinInterrumpir($publicId);
         }
     }
-
     /**
      * Avisa al usuario cuando un administrador cambia sus roles (DSMR-07).
      *
@@ -202,7 +176,6 @@ class UsuarioService
         if ($roles === []) {
             return;
         }
-
         $this->notificacionService->aUsuario(
             $usuario->id,
             'Tus roles han sido actualizados',
@@ -214,34 +187,26 @@ class UsuarioService
             ]
         );
     }
-
-
     private function validarRolesDePerfiles(User $usuario, array $roleIds): void
     {
         $rolesNecesarios = [];
-
         if ($usuario->apprentice()->exists()) {
             $rolesNecesarios[] = 'Aprendiz';
         }
-
         if ($usuario->teacher()->exists()) {
             $rolesNecesarios[] = 'Instructor';
         }
-
         if ($usuario->danteaccounts()->exists()) {
             $rolesNecesarios[] = 'Cuenta-dante';
         }
-
         if ($rolesNecesarios === []) {
             return;
         }
-
         $rolesIncluidos = Rol::query()
             ->whereIn('id', $roleIds)
             ->whereIn('rol', $rolesNecesarios)
             ->pluck('rol')
             ->all();
-
         if (count($rolesIncluidos) !== count($rolesNecesarios)) {
             throw new ReglasNegocioExceptions(
                 'No se pueden quitar roles que corresponden a perfiles o cuentas DANTE existentes.'
