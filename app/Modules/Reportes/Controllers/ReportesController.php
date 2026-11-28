@@ -58,13 +58,13 @@ class ReportesController extends Controller
         return $this->eliminado('Reporte');
     }
 
-    public function pdfListadoVer(): Response
+    public function pdfVer(): Response
     {
-        return $this->reporteFacade->pdfListadoVer();
+        return $this->reporteFacade->pdfVer();
     }
 
-    public function pdfListadoDescargar(): Response
+    public function pdfDescargar(): Response
     {
-        return $this->reporteFacade->pdfListadoDescargar();
+        return $this->reporteFacade->pdfDescargar();
     }
 }

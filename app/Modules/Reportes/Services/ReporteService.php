@@ -165,25 +165,10 @@ class ReporteService
         return 'reportes.pdf';
     }
 
-    private function datosParaPdf(?User $usuario = null): array
-    {
-        return $this->datosListadoParaPdf($usuario);
-    }
-
-    public function pdfListadoDescargar()
-    {
-        return $this->descargarPdf($this->datosListadoParaPdf(request()->user()), 'reportes.listado-pdf', 'reportes.pdf');
-    }
-
-    public function pdfListadoVer()
-    {
-        return $this->verPdf($this->datosListadoParaPdf(request()->user()), 'reportes.listado-pdf', 'reportes.pdf');
-    }
-
     /**
      * @return array{reportes: array<int, array<string, mixed>>, total: int, generado_en: \Illuminate\Support\Carbon}
      */
-    private function datosListadoParaPdf(?User $usuario = null): array
+    private function datosParaPdf(?User $usuario = null): array
     {
         $query = Report::query()
             ->with($this->relacionesParaPdf())

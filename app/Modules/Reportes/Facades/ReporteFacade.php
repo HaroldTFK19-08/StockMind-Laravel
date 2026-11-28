@@ -2,10 +2,8 @@
 
 namespace App\Modules\Reportes\Facades;
 
-use App\Modules\Shared\Facades\CrudFacade;
-
-use App\Modules\Reportes\Models\Report;
 use App\Modules\Reportes\Services\ReporteService;
+use App\Modules\Shared\Facades\CrudFacade;
 use Illuminate\Http\Response;
 
 class ReporteFacade extends CrudFacade
@@ -15,13 +13,13 @@ class ReporteFacade extends CrudFacade
         parent::__construct($reporteService);
     }
 
-    public function pdfListadoVer(): Response
+    public function pdfVer(): Response
     {
-        return $this->servicio->pdfListadoVer();
+        return $this->servicio->pdfVer();
     }
 
-    public function pdfListadoDescargar(): Response
+    public function pdfDescargar(): Response
     {
-        return $this->servicio->pdfListadoDescargar();
+        return $this->servicio->pdfDescargar();
     }
 }
