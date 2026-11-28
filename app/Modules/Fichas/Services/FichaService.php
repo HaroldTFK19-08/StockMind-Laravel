@@ -4,10 +4,15 @@ namespace App\Modules\Fichas\Services;
 
 use App\Modules\Fichas\Models\Coursegroup;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
+use App\Modules\Shared\Services\CacheService;
 use Illuminate\Support\Carbon;
 
 class FichaService
 {
+    public function __construct(
+        private CacheService $cache
+    ) {}
+
     public function listar()
     {
         return Coursegroup::with('teacher.user')
@@ -26,6 +31,7 @@ class FichaService
     public function crear(array $datos): Coursegroup
     {
         $ficha = Coursegroup::create($datos);
+        $this->cache->invalidar('fichas');
 
         return $this->mostrar($ficha->id);
     }
@@ -43,6 +49,7 @@ class FichaService
         }
 
         $ficha->update($datos);
+        $this->cache->invalidar('fichas');
 
         return $this->mostrar($id);
     }
@@ -58,5 +65,6 @@ class FichaService
         }
 
         $ficha->delete();
+        $this->cache->invalidar('fichas');
     }
 }

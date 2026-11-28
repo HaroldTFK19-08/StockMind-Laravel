@@ -16,6 +16,7 @@ use App\Modules\Usuarios\Models\Apprentice;
 use App\Modules\Usuarios\Models\Danteaccount;
 use App\Modules\Usuarios\Models\Teacher;
 use App\Modules\Usuarios\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -85,6 +86,29 @@ class PdfTest extends TestCase
         $this->assertStringNotContainsString('@supports', $css);
     }
 
+    public function test_los_reportes_y_asignaciones_generan_pdf_con_margenes(): void
+    {
+        foreach ([
+            'reportes.listado-pdf' => 'reportes',
+            'asignaciones.pdf' => 'asignaciones',
+        ] as $vista => $coleccion) {
+            $datos = [
+                $coleccion => [],
+                'total' => 0,
+                'generado_en' => now(),
+            ];
+            $pdf = Pdf::loadView($vista, $datos);
+
+            $this->assertStringStartsWith('%PDF', $pdf->output());
+
+            $margenes = $pdf->getDomPDF()->getCss()->get_page_styles()['base'];
+            $this->assertGreaterThan(40, $margenes->margin_top);
+            $this->assertGreaterThan(40, $margenes->margin_right);
+            $this->assertGreaterThan(40, $margenes->margin_bottom);
+            $this->assertGreaterThan(40, $margenes->margin_left);
+        }
+    }
+
     public function test_la_ficha_de_elemento_muestra_al_aprendiz_responsable_y_su_uso(): void
     {
         $datos = $this->crearEscenario();
@@ -107,6 +131,22 @@ class PdfTest extends TestCase
 
         $this->assertStringContainsString('Aprendiz Prueba', $html);
         $this->assertStringContainsString('Asignaciones: 1 (1 activas)', $html);
+        $this->assertStringContainsString(public_path('Capa 1.svg'), $html);
+        $this->assertStringContainsString('EN PRÉSTAMO ACTIVO', $html);
+        $this->assertStringContainsString('Inventario general', $html);
+
+        $pdf = Pdf::loadView('elementos.pdf', [
+            'elementos' => [$ficha],
+            'total' => 1,
+            'generado_en' => now(),
+        ]);
+        $this->assertStringStartsWith('%PDF', $pdf->output());
+
+        $margins = $pdf->getDomPDF()->getCss()->get_page_styles()['base'];
+        $this->assertGreaterThan(40, $margins->margin_top);
+        $this->assertGreaterThan(40, $margins->margin_right);
+        $this->assertGreaterThan(40, $margins->margin_bottom);
+        $this->assertGreaterThan(40, $margins->margin_left);
     }
 
     /**

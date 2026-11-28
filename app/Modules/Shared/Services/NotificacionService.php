@@ -104,14 +104,31 @@ class NotificacionService
      */
     public function idsCuentadantesDeAmbiente(int $ambienteId): array
     {
+        return $this->idsCuentadantesDeAmbientes([$ambienteId]);
+    }
+
+    /**
+     * Cuentadantes vigentes (y activos) a cargo de varios ambientes.
+     *
+     * @param  array<int, int>  $ambienteIds
+     * @return array<int, int>
+     */
+    public function idsCuentadantesDeAmbientes(array $ambienteIds): array
+    {
+        $ambienteIds = array_values(array_unique(array_filter(array_map('intval', $ambienteIds))));
+        if ($ambienteIds === []) {
+            return [];
+        }
+
         return Danteaccount::query()
-            ->where('environment_id', $ambienteId)
+            ->whereIn('environment_id', $ambienteIds)
             ->whereNull('fecha_fin')
             ->whereHas('user', function ($query) {
                 $query->where('estado', EstadoUsuario::Activo->value)
                     ->whereHas('roles', fn ($roles) => $roles->where('rol', 'Cuenta-dante'));
             })
             ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
             ->all();
     }
 
@@ -122,17 +139,32 @@ class NotificacionService
      */
     public function idsInstructoresDeAmbiente(int $ambienteId): array
     {
-        $ambiente = Environment::query()
-            ->with('teacher.user')
-            ->find($ambienteId);
+        return $this->idsInstructoresDeAmbientes([$ambienteId]);
+    }
 
-        $usuarioId = $ambiente?->teacher?->user?->id;
-
-        if ($usuarioId === null || $ambiente->teacher->user->estado !== EstadoUsuario::Activo->value) {
+    /**
+     * Instructores responsables activos de varios ambientes.
+     *
+     * @param  array<int, int>  $ambienteIds
+     * @return array<int, int>
+     */
+    public function idsInstructoresDeAmbientes(array $ambienteIds): array
+    {
+        $ambienteIds = array_values(array_unique(array_filter(array_map('intval', $ambienteIds))));
+        if ($ambienteIds === []) {
             return [];
         }
 
-        return [$usuarioId];
+        return Environment::query()
+            ->whereIn('id', $ambienteIds)
+            ->whereHas('teacher.user', fn ($query) => $query->where('estado', EstadoUsuario::Activo->value))
+            ->with('teacher:id,user_id')
+            ->get(['id', 'teacher_id'])
+            ->pluck('teacher.user_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
     }
 
     public function marcarLeida(Notification $notificacion): void

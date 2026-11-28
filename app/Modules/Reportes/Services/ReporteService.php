@@ -246,11 +246,17 @@ class ReporteService
 
         $destinatarios = $this->notificacionService->idsConRol('Administrador');
 
-        foreach ($elementos->pluck('environment_id')->filter()->unique() as $ambienteId) {
+        $ambienteIds = $elementos->pluck('environment_id')
+            ->filter()
+            ->unique()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($ambienteIds !== []) {
             $destinatarios = array_merge(
                 $destinatarios,
-                $this->notificacionService->idsCuentadantesDeAmbiente((int) $ambienteId),
-                $this->notificacionService->idsInstructoresDeAmbiente((int) $ambienteId)
+                $this->notificacionService->idsCuentadantesDeAmbientes($ambienteIds),
+                $this->notificacionService->idsInstructoresDeAmbientes($ambienteIds)
             );
         }
 

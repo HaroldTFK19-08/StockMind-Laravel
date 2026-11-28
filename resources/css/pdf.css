@@ -1,4 +1,5 @@
-@import "tailwindcss";
+@import "tailwindcss/theme" theme(reference);
+@import "tailwindcss/utilities";
 @import "./theme.css";
 
 @source "../views/pdfs/**/*.blade.php";
@@ -7,215 +8,363 @@
 @source "../views/asignaciones/*.blade.php";
 
 /*
- * Clases compiladas con Tailwind para DomPDF.
- * DomPDF no interpreta clases utilitarias en vivo: este archivo se compila a
- * CSS plano y se incrusta en las vistas PDF desde public/css/pdf.css.
+ * Estilos compilados con Tailwind CSS v4 para DomPDF en StockMind.
+ * Se compila a CSS plano en public/css/pdf.css e incrusta en las plantillas Blade.
+ * Evitar Flexbox/Grid en estructuras complejas de PDF; priorizar tablas y CSS explícito.
  */
 @layer components {
     .pdf-body {
         @apply bg-white text-sm-tinta;
+        margin: 0;
+        padding: 0;
         font-family: "DejaVu Sans", sans-serif;
         font-size: 9px;
         line-height: 1.45;
-    }
-
-    .pdf-header {
-        @apply mb-3 border-b-2 border-sm-bosque pb-2;
-        border-bottom: 2px solid #17330f;
-    }
-
-    .pdf-header-grid {
-        @apply mb-2 w-full border-collapse;
-    }
-
-    .pdf-header-grid td {
-        @apply align-middle;
-        padding: 0;
-        border: 0;
-    }
-
-    .pdf-brand-mark {
-        @apply inline-block rounded-sm bg-sm-verde px-1 py-1 text-[9px] font-bold text-white;
-        padding: 3px 6px;
-        background-color: #39a900;
-        color: #ffffff;
-    }
-
-    .pdf-brand-name {
-        @apply ml-1 text-[10px] font-bold tracking-wide text-sm-bosque;
-        color: #17330f;
-    }
-
-    .pdf-document-meta {
-        @apply text-right text-[8px] text-sm-gris;
-    }
-
-    .pdf-document-label {
-        @apply font-bold tracking-wide text-sm-verde-oscuro;
-        color: #2b8000;
-    }
-
-    .pdf-title {
-        @apply m-0 text-xl font-bold text-sm-bosque;
-        font-size: 18px;
-        line-height: 1.2;
-        color: #17330f;
-    }
-
-    .pdf-subtitle {
-        @apply text-sm text-sm-gris;
-        margin-top: 2px;
-        font-size: 9px;
-    }
-
-    .pdf-header-meta {
-        @apply mt-2 w-full border-collapse;
-        border-top: 1px solid #dde3d8;
-    }
-
-    .pdf-header-meta td {
-        @apply pt-1 align-top;
-        padding-right: 10px;
-        border: 0;
-    }
-
-    .pdf-meta-label {
-        @apply block text-[7px] font-bold tracking-wide text-sm-gris;
-        color: #5f6b5c;
-    }
-
-    .pdf-meta-value {
-        @apply block text-[9px] font-bold text-sm-tinta;
-        margin-top: 1px;
-    }
-
-    .pdf-meta,
-    .pdf-table {
-        @apply w-full border-collapse;
-    }
-
-    .pdf-table {
-        table-layout: fixed;
-        margin-top: 8px;
-        font-size: 8px;
-    }
-
-    .pdf-meta td {
-        @apply border border-sm-linea px-2 py-1 align-top text-left;
-        border-style: solid;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-        padding-top: 0.25rem;
-        padding-bottom: 0.25rem;
-    }
-
-    .pdf-table th {
-        @apply border border-sm-bosque bg-sm-verde px-1 py-1 text-left text-[9px] font-bold text-white;
-        border: 1px solid #2b8000;
-        padding: 6px 5px;
-        background-color: #39a900;
-        color: #ffffff;
-        font-size: 7px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        vertical-align: middle;
-    }
-
-    .pdf-table td {
-        @apply border border-sm-linea px-1 py-1 align-top text-left;
-        border: 1px solid #dde3d8;
-        padding: 5px;
-        vertical-align: top;
+        word-wrap: break-word;
         overflow-wrap: break-word;
     }
-
-    .pdf-table tbody tr:nth-child(even) td {
-        @apply bg-sm-papel;
-        background-color: #f4f6f1;
+    /* Encabezado institucional */
+    .pdf-header {
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #17330f;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
-
-    .pdf-label {
-        @apply w-1/5 bg-sm-hoja font-bold;
+    .pdf-header-grid {
+        width: 100%;
+        margin-bottom: 8px;
+        border-collapse: collapse;
     }
-
-    .pdf-small {
-        @apply text-[8px] text-sm-gris;
-        font-size: 7px;
+    .pdf-header-grid td {
+        padding: 0;
+        border: 0;
+        vertical-align: middle;
+    }
+    .pdf-brand-logo {
+        display: block;
+        width: 92px;
+        height: auto;
+    }
+    .pdf-brand {
+        margin-bottom: 4px;
+        color: #2b8000;
+        font-size: 9px;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+    }
+    .pdf-brand-mark {
+        display: inline-block;
+        padding: 3px 6px;
+        border-radius: 2px;
+        background-color: #39a900;
+        color: #ffffff;
+        font-size: 8px;
+        font-weight: bold;
+        line-height: 1.2;
+    }
+    .pdf-brand-name {
+        margin-left: 6px;
+        color: #17330f;
+        font-size: 10px;
+        font-weight: bold;
+        letter-spacing: 0.03em;
+    }
+    .pdf-document-meta {
+        color: #5f6b5c;
+        font-size: 8px;
+        line-height: 1.35;
+        text-align: right;
+    }
+    .pdf-document-label {
+        color: #2b8000;
+        font-size: 8px;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .pdf-title {
+        margin: 0;
+        color: #17330f;
+        font-size: 19px;
+        font-weight: bold;
+        line-height: 1.25;
+    }
+    .pdf-subtitle {
+        margin-top: 3px;
+        color: #5f6b5c;
+        font-size: 9px;
         line-height: 1.35;
     }
-
-    .pdf-footer {
-        @apply mt-3 border-t border-sm-linea pt-2 text-[8px] text-sm-gris;
-        border-top: 1px solid #dde3d8;
-        line-height: 1.4;
-    }
-
-    .pdf-photo {
-        max-width: 100%;
-        max-height: 280px;
+    /* Metadatos del reporte o ficha */
+    .pdf-header-meta {
+        width: 100%;
         margin-top: 8px;
+        border-collapse: collapse;
+        table-layout: fixed;
+        border-top: 1px solid #dde3d8;
     }
-
-    .pdf-nowrap {
-        white-space: nowrap;
+    .pdf-header-meta td {
+        padding: 5px 10px 0 0;
+        border: 0;
+        vertical-align: top;
     }
-
-    /* DomPDF: repite la cabecera y evita partir una fila entre páginas. */
+    .pdf-header-meta--four td {
+        width: 25%;
+    }
+    .pdf-header-meta td:last-child {
+        padding-right: 0;
+        text-align: right;
+    }
+    .pdf-meta-label {
+        display: block;
+        color: #5f6b5c;
+        font-size: 7px;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .pdf-meta-value {
+        display: block;
+        margin-top: 2px;
+        color: #17330f;
+        font-size: 9px;
+        font-weight: bold;
+        line-height: 1.3;
+    }
+    .pdf-summary-grid {
+        width: 100%;
+        margin: 10px 0 12px;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+    .pdf-summary-grid td {
+        width: 33.333%;
+        padding: 0 7px;
+        border: 0;
+        vertical-align: top;
+    }
+    .pdf-summary-grid td:first-child {
+        padding-left: 0;
+    }
+    .pdf-summary-grid td:last-child {
+        padding-right: 0;
+    }
+    .pdf-stat-card {
+        height: 54px;
+        padding: 7px 9px;
+        border: 1px solid #dfe8d8;
+        background-color: #f1f7e9;
+    }
+    .pdf-stat-card--loan {
+        background-color: #f8f5e9;
+        border-color: #eee3c5;
+    }
+    .pdf-stat-card--maintenance {
+        background-color: #fbefed;
+        border-color: #f1d8d4;
+    }
+    .pdf-stat-label {
+        display: block;
+        color: #5f6b5c;
+        font-size: 7px;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+    }
+    .pdf-stat-details {
+        width: 100%;
+        margin-top: 3px;
+        border-collapse: collapse;
+    }
+    .pdf-stat-details td {
+        padding: 0;
+        border: 0;
+        vertical-align: middle;
+    }
+    .pdf-stat-value {
+        color: #2b8000;
+        font-size: 14px;
+        font-weight: bold;
+        line-height: 1;
+    }
+    .pdf-stat-card--loan .pdf-stat-value {
+        color: #8a5300;
+    }
+    .pdf-stat-card--maintenance .pdf-stat-value {
+        color: #b42318;
+    }
+    .pdf-stat-note {
+        color: #5f6b5c;
+        font-size: 7px;
+        text-align: right;
+    }
+    /* Tablas de ficha y listados */
+    .pdf-meta,
+    .pdf-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .pdf-meta {
+        margin-top: 6px;
+        margin-bottom: 10px;
+    }
+    .pdf-meta td {
+        padding: 5px 8px;
+        border: 1px solid #dde3d8;
+        text-align: left;
+        vertical-align: top;
+    }
+    .pdf-label {
+        width: 20%;
+        background-color: #eaf4e2;
+        color: #17330f;
+        font-weight: bold;
+    }
+    .pdf-table {
+        margin-top: 8px;
+        table-layout: fixed;
+        font-size: 8px;
+    }
+    .pdf-table--inventory col:nth-child(1) { width: 10%; }
+    .pdf-table--inventory col:nth-child(2) { width: 24%; }
+    .pdf-table--inventory col:nth-child(3) { width: 11%; }
+    .pdf-table--inventory col:nth-child(4) { width: 11%; }
+    .pdf-table--inventory col:nth-child(5) { width: 11%; }
+    .pdf-table--inventory col:nth-child(6) { width: 14%; }
+    .pdf-table--inventory col:nth-child(7) { width: 19%; }
     .pdf-table thead {
         display: table-header-group;
     }
-
     .pdf-table tr {
         page-break-inside: avoid;
+        break-inside: avoid;
     }
-
-    .pdf-brand {
-        @apply mb-1 text-[9px] font-bold tracking-wide text-sm-verde-oscuro;
+    .pdf-table th {
+        padding: 6px 5px;
+        border: 1px solid #2b8000;
+        background-color: #39a900;
+        color: #ffffff;
+        font-size: 7px;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+        line-height: 1.25;
+        text-align: left;
+        text-transform: uppercase;
+        vertical-align: middle;
     }
-
+    .pdf-table td {
+        padding: 5px;
+        border: 1px solid #dde3d8;
+        color: #17330f;
+        line-height: 1.35;
+        text-align: left;
+        vertical-align: top;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+    .pdf-table tbody tr:nth-child(even) td {
+        background-color: #f4f6f1;
+    }
+    /* Tipografía auxiliar y celdas */
+    .pdf-small {
+        color: #5f6b5c;
+        font-size: 7px;
+        line-height: 1.35;
+    }
+    .pdf-nowrap {
+        white-space: nowrap;
+    }
     .pdf-cell-title {
-        @apply font-bold text-sm-tinta;
+        color: #17330f;
         font-size: 8px;
+        font-weight: bold;
+        line-height: 1.3;
     }
-
     .pdf-cell-detail {
-        @apply mt-1 text-[8px] text-sm-gris;
         display: block;
         margin-top: 2px;
         color: #5f6b5c;
         font-size: 7px;
         line-height: 1.35;
     }
-
-    .pdf-status {
-        @apply inline-block rounded-sm bg-sm-hoja px-1 py-1 font-bold text-sm-verde-oscuro;
-        padding: 2px 5px;
-        background-color: #eaf4e2;
-        color: #2b8000;
-        font-size: 7px;
-        text-transform: capitalize;
-    }
-
-    .pdf-empty {
-        @apply py-3 text-center text-sm-gris;
-        padding: 18px 8px;
-        background-color: #f4f6f1;
-        font-style: italic;
-    }
-
     .pdf-descripcion {
-        @apply px-1 py-1 text-[8px] text-sm-gris;
+        padding: 6px 8px;
+        border: 1px solid #dde3d8;
         background-color: #f8faf6;
+        color: #5f6b5c;
+        font-size: 8px;
         line-height: 1.45;
     }
-
     .pdf-report-description {
         display: block;
-        margin-top: 3px;
-        padding-top: 3px;
+        margin-top: 4px;
+        padding-top: 4px;
         border-top: 1px solid #dde3d8;
         color: #5f6b5c;
         font-size: 7px;
         line-height: 1.35;
+    }
+    /* Estados e imágenes */
+    .pdf-status {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 2px;
+        background-color: #eaf4e2;
+        color: #2b8000;
+        font-size: 7px;
+        font-weight: bold;
+        line-height: 1.2;
+        text-transform: capitalize;
+    }
+    .pdf-status--pendiente {
+        background-color: #fff6e5;
+        color: #8a5300;
+    }
+    .pdf-status--inactivo {
+        background-color: #ecefeb;
+        color: #4a5248;
+    }
+    .pdf-status--available {
+        background-color: #eaf4e2;
+        color: #2b8000;
+    }
+    .pdf-status--loan {
+        background-color: #fcf0d7;
+        color: #8a5300;
+    }
+    .pdf-status--maintenance {
+        background-color: #fbdfda;
+        color: #b42318;
+    }
+    .pdf-empty {
+        padding: 18px 8px;
+        border: 1px solid #dde3d8;
+        background-color: #f4f6f1;
+        color: #5f6b5c;
+        font-size: 8px;
+        font-style: italic;
+        text-align: center;
+    }
+    .pdf-photo {
+        display: block;
+        max-width: 100%;
+        max-height: 260px;
+        margin-top: 8px;
+        border: 1px solid #dde3d8;
+    }
+    .pdf-footer {
+        margin-top: 12px;
+        padding-top: 6px;
+        border-top: 1px solid #dde3d8;
+        color: #5f6b5c;
+        font-size: 7.5px;
+        line-height: 1.4;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+}
+@media print {
+    .pdf-body {
+        background-color: #ffffff;
     }
 }

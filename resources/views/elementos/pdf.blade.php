@@ -2,17 +2,84 @@
 
 @section('titulo', 'Inventario de elementos')
 
+@php
+    $ubicaciones = collect($elementos)
+        ->pluck('ubicacion')
+        ->filter()
+        ->unique()
+        ->values();
+    $ubicacionInventario = $ubicaciones->count() === 1
+        ? $ubicaciones->first()
+        : ($ubicaciones->isEmpty() ? 'N/D' : 'Varias ubicaciones');
+    $conteosEstado = collect($elementos)->countBy(
+        static fn (array $elemento): string => strtolower(
+            str_replace('_', ' ', (string) ($elemento['estado'] ?? ''))
+        )
+    );
+@endphp
+
 @section('cabecera')
     @include('pdfs.partials.cabecera', [
         'titulo' => 'Inventario de elementos',
-        'subtitulo' => 'StockMind - Responsables y uso del inventario',
+        'subtitulo' => 'StockMind - Responsables y uso del inventario institucional',
         'total' => $total,
         'generado_en' => $generado_en,
+        'metadatosAdicionales' => [
+            ['etiqueta' => 'UBICACIÓN', 'valor' => $ubicacionInventario],
+            ['etiqueta' => 'TIPO DE INFORME', 'valor' => 'Inventario general'],
+        ],
     ])
 @endsection
 
 @section('contenido')
-    <table class="pdf-table">
+    <table class="pdf-summary-grid">
+        <tr>
+            <td>
+                <div class="pdf-stat-card pdf-stat-card--available">
+                    <span class="pdf-stat-label">DISPONIBLES</span>
+                    <table class="pdf-stat-details">
+                        <tr>
+                            <td><strong class="pdf-stat-value">{{ $conteosEstado->get('disponible', 0) }}</strong></td>
+                            <td class="pdf-stat-note">Listos para asignar</td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+            <td>
+                <div class="pdf-stat-card pdf-stat-card--loan">
+                    <span class="pdf-stat-label">EN PRÉSTAMO ACTIVO</span>
+                    <table class="pdf-stat-details">
+                        <tr>
+                            <td><strong class="pdf-stat-value">{{ $conteosEstado->get('prestado', 0) }}</strong></td>
+                            <td class="pdf-stat-note">En uso temporal</td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+            <td>
+                <div class="pdf-stat-card pdf-stat-card--maintenance">
+                    <span class="pdf-stat-label">EN MANTENIMIENTO</span>
+                    <table class="pdf-stat-details">
+                        <tr>
+                            <td><strong class="pdf-stat-value">{{ $conteosEstado->get('en mantenimiento', 0) }}</strong></td>
+                            <td class="pdf-stat-note">Revisión técnica</td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="pdf-table pdf-table--inventory">
+        <colgroup>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+            <col>
+        </colgroup>
         <thead>
             <tr>
                 <th>Código</th>
@@ -44,7 +111,16 @@
                     <td>{{ $elemento['categoria'] }}</td>
                     <td>{{ $elemento['ubicacion'] }}</td>
                     <td>
-                        <span class="pdf-status">{{ ucfirst(str_replace('_', ' ', (string) $elemento['estado'])) }}</span>
+                        @php
+                            $estadoNormalizado = strtolower(str_replace('_', ' ', (string) $elemento['estado']));
+                            $claseEstado = match ($estadoNormalizado) {
+                                'disponible' => ' pdf-status--available',
+                                'prestado' => ' pdf-status--loan',
+                                'en mantenimiento' => ' pdf-status--maintenance',
+                                default => '',
+                            };
+                        @endphp
+                        <span class="pdf-status{{ $claseEstado }}">{{ ucfirst($estadoNormalizado) }}</span>
                         @if($elemento['condicion'])
                             <span class="pdf-cell-detail">Condición: {{ $elemento['condicion'] }}</span>
                         @endif

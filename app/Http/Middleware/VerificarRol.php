@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Shared\Middleware;
+namespace App\Http\Middleware;
 
 use App\Modules\Shared\Services\Autorizacion;
 use Closure;

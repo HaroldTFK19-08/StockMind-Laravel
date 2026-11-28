@@ -222,33 +222,41 @@ class TrasladoService
             );
         }
 
+        $idsUnicos = array_values(array_unique(array_map('intval', $elementIds)));
+
         $elementos = Element::query()
-            ->whereIn('id', $elementIds)
+            ->whereIn('id', $idsUnicos)
             ->orderBy('id')
             ->lockForUpdate()
             ->get();
 
-        if ($elementos->count() !== count(array_unique($elementIds))) {
+        if ($elementos->count() !== count($idsUnicos)) {
             throw new ReglasNegocioExceptions(
                 'No se encontraron todos los elementos del traslado.'
             );
         }
 
-        foreach ($elementos as $elemento) {
-            $tieneAsignacionActiva = Assignment::query()
-                ->where('element_id', $elemento->id)
-                ->whereIn('estado', ['activa', 'vencida'])
-                ->exists();
-            $tienePrestamoActivo = Loan::query()
-                ->where('element_id', $elemento->id)
-                ->whereIn('estado', ['activo', 'vencido'])
-                ->exists();
+        $asignacionesActivas = Assignment::query()
+            ->whereIn('element_id', $idsUnicos)
+            ->whereIn('estado', ['activa', 'vencida'])
+            ->pluck('element_id')
+            ->all();
+        $asignacionesActivas = array_flip(array_map('intval', $asignacionesActivas));
 
+        $prestamosActivos = Loan::query()
+            ->whereIn('element_id', $idsUnicos)
+            ->whereIn('estado', ['activo', 'vencido'])
+            ->pluck('element_id')
+            ->all();
+        $prestamosActivos = array_flip(array_map('intval', $prestamosActivos));
+
+        foreach ($elementos as $elemento) {
+            $idElemento = (int) $elemento->id;
             if (
-                $elemento->environment_id !== $origenId
+                (int) $elemento->environment_id !== $origenId
                 || $elemento->estado !== 'disponible'
-                || $tieneAsignacionActiva
-                || $tienePrestamoActivo
+                || isset($asignacionesActivas[$idElemento])
+                || isset($prestamosActivos[$idElemento])
             ) {
                 throw new ReglasNegocioExceptions(
                     'Todos los elementos deben estar disponibles y ubicados en el ambiente de origen para completar el traslado.'
@@ -256,12 +264,12 @@ class TrasladoService
             }
         }
 
-        foreach ($elementos as $elemento) {
-            $elemento->update([
+        Element::query()
+            ->whereIn('id', $idsUnicos)
+            ->update([
                 'environment_id' => $destinoId,
                 'warehouse_id' => null,
             ]);
-        }
 
         $fechaFin = now()->toDateString();
         $cuenta->update(['fecha_fin' => $fechaFin]);

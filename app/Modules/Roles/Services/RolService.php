@@ -4,9 +4,14 @@ namespace App\Modules\Roles\Services;
 
 use App\Modules\Roles\Models\Rol;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
+use App\Modules\Shared\Services\CacheService;
 
 class RolService
 {
+    public function __construct(
+        private CacheService $cache
+    ) {}
+
     public function listar()
     {
         return Rol::latest()->paginate(10);
@@ -60,13 +65,17 @@ class RolService
 
     public function crear(array $datos): Rol
     {
-        return Rol::create($datos);
+        $rol = Rol::create($datos);
+        $this->cache->invalidar('roles');
+
+        return $rol;
     }
 
     public function actualizar(int $id, array $datos): Rol
     {
         $rol = $this->mostrar($id);
         $rol->update($datos);
+        $this->cache->invalidar('roles');
 
         return $rol->refresh();
     }
@@ -82,5 +91,6 @@ class RolService
         }
 
         $rol->delete();
+        $this->cache->invalidar('roles');
     }
 }

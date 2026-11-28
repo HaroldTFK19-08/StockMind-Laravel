@@ -7,6 +7,7 @@ use App\Modules\Roles\Facades\RolFacade;
 use App\Modules\Shared\Enums\EstadoUsuario;
 use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
+use App\Modules\Shared\Services\CacheService;
 use App\Modules\Shared\Services\CloudinaryService;
 use App\Modules\Shared\Services\Concerns\GestionaImagenes;
 use App\Modules\Shared\Services\NotificacionService;
@@ -21,7 +22,8 @@ class UsuarioService
         private CloudinaryService $cloudinaryService,
         private AuthFacade $authFacade,
         private RolFacade $rolFacade,
-        private NotificacionService $notificacionService
+        private NotificacionService $notificacionService,
+        private CacheService $cache
     ) {}
     public function listar()
     {
@@ -87,6 +89,7 @@ class UsuarioService
                 return $usuario;
             }
         );
+        $this->cache->invalidar('usuarios');
         return $this->mostrar($usuario->id);
     }
     /**
@@ -143,6 +146,8 @@ class UsuarioService
             },
             $publicIdAnterior
         );
+        $this->cache->invalidar('usuarios');
+
         return [
             'usuario' => $this->mostrar($id),
             'token' => $tokenNuevo,
@@ -162,6 +167,7 @@ class UsuarioService
         }
         $publicId = $usuario->foto_perfil_public_id;
         $usuario->delete();
+        $this->cache->invalidar('usuarios');
         if ($publicId) {
             $this->cloudinaryService->eliminarSinInterrumpir($publicId);
         }

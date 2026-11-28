@@ -5,7 +5,10 @@
     <title>@yield('titulo')</title>
     @include('pdfs.partials.estilos')
     <style>
-        @page { size: a4 landscape; margin: 14mm 10mm 12mm; }
+        @page {
+            size: a4 landscape;
+            margin: 16mm;
+        }
     </style>
 </head>
 <body class="pdf-body">
