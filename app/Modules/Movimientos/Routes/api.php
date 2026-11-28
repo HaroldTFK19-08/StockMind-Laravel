@@ -4,20 +4,21 @@ use App\Modules\Movimientos\Controllers\MovimientosController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Trazabilidad de inventario: consulta para roles operativos, mutación administrativa
-    Route::middleware('rol:Administrador,Instructor,Aprendiz,Cuenta-dante')->group(function () {
-        Route::get('movimientos', [MovimientosController::class, 'index']);
-        Route::get('movimientos/{movimiento}', [MovimientosController::class, 'show'])
-            ->whereNumber('movimiento');
+    Route::middleware('role:admin,Cuenta-dante')->group(function () {
+        Route::apiResource('movimientos', MovimientosController::class)
+            ->only(['index', 'show'])
+            ->parameters(['movimientos' => 'movimiento']);
     });
 
-    Route::middleware('rol:Administrador,Instructor,Aprendiz,Cuenta-dante')->group(function () {
-        Route::post('movimientos', [MovimientosController::class, 'store']);
-        Route::put('movimientos/{movimiento}', [MovimientosController::class, 'update'])
-            ->whereNumber('movimiento');
-        Route::patch('movimientos/{movimiento}', [MovimientosController::class, 'update'])
-            ->whereNumber('movimiento');
-        Route::delete('movimientos/{movimiento}', [MovimientosController::class, 'destroy'])
-            ->whereNumber('movimiento');
+    Route::middleware('role:Cuenta-dante')->group(function () {
+        Route::apiResource('movimientos', MovimientosController::class)
+            ->only(['store'])
+            ->parameters(['movimientos' => 'movimiento']);
+    });
+
+    Route::middleware('role:admin')->group(function () {
+        Route::apiResource('movimientos', MovimientosController::class)
+            ->only(['update', 'destroy'])
+            ->parameters(['movimientos' => 'movimiento']);
     });
 });

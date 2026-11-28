@@ -21,9 +21,12 @@ class FiltrosRolesTest extends TestCase
     {
         $instructor = Rol::create(['rol' => 'Instructor', 'descripcion' => 'Instructor']);
         $cuentadante = Rol::create(['rol' => 'Cuenta-dante', 'descripcion' => 'Cuenta dante']);
+        $admin = Rol::create(['rol' => 'Administrador', 'descripcion' => 'Administrador']);
         $usuario = $this->crearUsuario('Pendiente');
 
-        Sanctum::actingAs($this->crearUsuario(EstadoUsuario::Activo->value));
+        $adminUser = $this->crearUsuario(EstadoUsuario::Activo->value);
+        $adminUser->roles()->sync([$admin->id]);
+        Sanctum::actingAs($adminUser);
 
         $respuesta = $this->putJson("/v1/usuarios/{$usuario->id}", [
             'role_ids' => [$instructor->id, $cuentadante->id],
@@ -44,9 +47,12 @@ class FiltrosRolesTest extends TestCase
     {
         $aprendiz = Rol::create(['rol' => 'Aprendiz', 'descripcion' => 'Aprendiz']);
         $instructor = Rol::create(['rol' => 'Instructor', 'descripcion' => 'Instructor']);
+        $admin = Rol::create(['rol' => 'Administrador', 'descripcion' => 'Administrador']);
         $usuario = $this->crearUsuario('Pendiente');
 
-        Sanctum::actingAs($this->crearUsuario(EstadoUsuario::Activo->value));
+        $adminUser = $this->crearUsuario(EstadoUsuario::Activo->value);
+        $adminUser->roles()->sync([$admin->id]);
+        Sanctum::actingAs($adminUser);
 
         $this->putJson("/v1/usuarios/{$usuario->id}", [
             'role_ids' => [$aprendiz->id, $instructor->id],
