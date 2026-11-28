@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('danteaccounts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('environment_id')->constrained('environments');
+            $table->foreignId('environment_id')->nullable()->constrained('environments')->nullOnDelete()->nullOnUpdate();
             $table->date('fecha_inicio');
             $table->date('fecha_fin')->nullable();
             $table->timestamps();

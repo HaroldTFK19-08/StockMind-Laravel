@@ -21,6 +21,24 @@ class RegistroAmbienteRequest extends BaseFormRequest
                 'integer',
                 Rule::exists('teachers', 'id'),
             ],
+            'cuentadante_ids' => ['sometimes', 'nullable', 'array'],
+            'cuentadante_ids.*' => [
+                'integer',
+                'distinct',
+                Rule::exists('users', 'id')->where(function ($query) {
+                    $query->where('estado', 'activo')
+                        ->whereHas('roles', fn ($roles) => $roles->where('rol', 'Cuenta-dante'));
+                }),
+            ],
+            'cuentadante_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('users', 'id')->where(function ($query) {
+                    $query->where('estado', 'activo')
+                        ->whereHas('roles', fn ($roles) => $roles->where('rol', 'Cuenta-dante'));
+                }),
+            ],
             'nombre' => 'required|string|max:100',
             'capacidad' => 'required|integer|min:0|max:65535',
             'tipo' => 'required|string|max:50',

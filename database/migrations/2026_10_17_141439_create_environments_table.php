@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('environments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('headquarter_id')->constrained('headquarters');
-            $table->foreignId('teacher_id')->nullable()->constrained('teachers');
             $table->string('nombre', 100);
             $table->unsignedSmallInteger('capacidad');
             $table->string('tipo', 50); // sala de sistemas, taller, laboratorio...
