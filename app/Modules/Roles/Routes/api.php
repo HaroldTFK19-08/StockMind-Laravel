@@ -4,5 +4,7 @@ use App\Modules\Roles\Controllers\RolesController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('roles', RolesController::class);
+    Route::middleware('role:admin')->group(function () {
+        Route::apiResource('roles', RolesController::class);
+    });
 });
