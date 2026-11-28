@@ -4,6 +4,7 @@ use App\Modules\Elementos\Controllers\ElementosController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
+    // Doc: lectura operativa con alcance por rol
     Route::middleware('role:admin,Instructor,Cuenta-dante')->group(function () {
         Route::get(
             'elementos/inventario-por-sede-almacen-categoria',
@@ -13,6 +14,12 @@ Route::middleware('auth:sanctum')->group(function () {
             'elementos/{codigo}/historial',
             [ElementosController::class, 'historial']
         );
+    });
+
+    // PDFs inventario: admin todo; cuentadante solo inventario de sus ambientes asignados
+    Route::middleware('role:admin,Cuenta-dante')->group(function () {
+        Route::get('elementos/pdf/ver', [ElementosController::class, 'pdfVer']);
+        Route::get('elementos/pdf/descargar', [ElementosController::class, 'pdfDescargar']);
     });
 
     Route::middleware('role:admin,Instructor,Cuenta-dante,Aprendiz')->group(function () {

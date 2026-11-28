@@ -9,18 +9,19 @@ use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Exceptions\ReglasNegocioExceptions;
 use App\Modules\Shared\Services\CacheService;
 use App\Modules\Shared\Services\CloudinaryService;
+use App\Modules\Shared\Services\Concerns\FiltraPdfPorAlcance;
 use App\Modules\Shared\Services\Concerns\GeneraPdf;
 use App\Modules\Shared\Services\Concerns\GestionaImagenes;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Shared\Services\PDFService;
 use App\Modules\Shared\Services\ResponsablesElementoService;
+use App\Modules\Usuarios\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 
 class ElementoService
 {
-    // El trait aporta pdfVer() y pdfDescargar(); los datos los construye este servicio.
+    use FiltraPdfPorAlcance;
     use GeneraPdf;
-
-    // Subida, transacción y limpieza de imágenes se comparten con otros servicios.
     use GestionaImagenes;
 
     protected function vistaPdf(): string
@@ -325,18 +326,47 @@ class ElementoService
     /**
      * @return array{elementos: array<int, array<string, mixed>>, total: int, generado_en: \Illuminate\Support\Carbon}
      */
-    private function datosParaPdf(): array
+    private function datosParaPdf(?User $usuario = null): array
     {
-        $elementos = Element::query()
+        $query = Element::query()
             ->with(ResponsablesElementoService::relacionesParaPdf())
-            ->orderBy('codigo_inventario')
-            ->get();
+            ->orderBy('codigo_inventario');
+
+        $this->aplicarAlcancePdf($query, $usuario);
+        $elementos = $query->get();
 
         return [
             'elementos' => $this->responsablesElementoService->preparar($elementos),
             'total' => $elementos->count(),
             'generado_en' => now(),
         ];
+    }
+
+    private function aplicarAlcancePdf(Builder $query, ?User $usuario): void
+    {
+        if ($usuario === null || $usuario->tieneRol('Administrador')) {
+            return;
+        }
+
+        $ambienteIds = $this->ambientesAsignadosIds($usuario);
+        if ($ambienteIds !== []) {
+            $query->whereIn('environment_id', $ambienteIds);
+            return;
+        }
+
+        if ($usuario->tieneRol('Instructor')) {
+            $instructorId = $usuario->teacher?->id;
+            $aprendizIds = $this->aprendicesDeInstructorIds($usuario);
+            $query->where(function (Builder $q) use ($instructorId, $aprendizIds) {
+                $q->whereHas('assignments', fn (Builder $a) => $a->where('teacher_id', $instructorId));
+                if ($aprendizIds !== []) {
+                    $q->orWhereHas('assignments', fn (Builder $a) => $a->whereIn('apprentice_id', $aprendizIds));
+                }
+            });
+            return;
+        }
+
+        $this->restringirConsultaSinAlcance($query);
     }
 
 }

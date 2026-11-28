@@ -17,9 +17,9 @@ class LoginRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            //
-            'email' => ['required', 'email'],
+            'email' => ['required', 'email', 'max:150'],
             'password' => ['required', 'string'],
+            'codigo' => ['nullable', 'string', 'digits:6'],
         ];
     }
     public function messages(): array
@@ -28,6 +28,7 @@ class LoginRequest extends BaseFormRequest
             'email.required' => 'El correo es obligatorio.',
             'email.email' => 'El correo no es vÃ¡lido.',
             'password.required' => 'La contraseÃ±a es obligatoria.',
+            'codigo.digits' => 'El código debe tener 6 dígitos.',
         ];
     }
 }

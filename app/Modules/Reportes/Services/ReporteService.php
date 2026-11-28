@@ -7,18 +7,19 @@ use App\Modules\Reportes\Models\Report;
 use App\Modules\Shared\Enums\TipoNotificacion;
 use App\Modules\Shared\Services\CacheService;
 use App\Modules\Shared\Services\CloudinaryService;
+use App\Modules\Shared\Services\Concerns\FiltraPdfPorAlcance;
 use App\Modules\Shared\Services\Concerns\GeneraPdf;
 use App\Modules\Shared\Services\Concerns\GestionaImagenes;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Shared\Services\PDFService;
 use App\Modules\Shared\Services\ResponsablesElementoService;
+use App\Modules\Usuarios\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReporteService
 {
-    // El trait aporta los helpers ver/descargar para el PDF general de reportes.
+    use FiltraPdfPorAlcance;
     use GeneraPdf;
-
-    // Subida, transacción y limpieza de imágenes se comparten con otros servicios.
     use GestionaImagenes;
 
     public function __construct(
@@ -154,25 +155,42 @@ class ReporteService
         }
     }
 
+    protected function vistaPdf(): string
+    {
+        return 'reportes.listado-pdf';
+    }
+
+    protected function nombrePdf(): string
+    {
+        return 'reportes.pdf';
+    }
+
+    private function datosParaPdf(?User $usuario = null): array
+    {
+        return $this->datosListadoParaPdf($usuario);
+    }
+
     public function pdfListadoDescargar()
     {
-        return $this->descargarPdf($this->datosListadoParaPdf(), 'reportes.listado-pdf', 'reportes.pdf');
+        return $this->descargarPdf($this->datosListadoParaPdf(request()->user()), 'reportes.listado-pdf', 'reportes.pdf');
     }
 
     public function pdfListadoVer()
     {
-        return $this->verPdf($this->datosListadoParaPdf(), 'reportes.listado-pdf', 'reportes.pdf');
+        return $this->verPdf($this->datosListadoParaPdf(request()->user()), 'reportes.listado-pdf', 'reportes.pdf');
     }
 
     /**
      * @return array{reportes: array<int, array<string, mixed>>, total: int, generado_en: \Illuminate\Support\Carbon}
      */
-    private function datosListadoParaPdf(): array
+    private function datosListadoParaPdf(?User $usuario = null): array
     {
-        $reportes = Report::query()
+        $query = Report::query()
             ->with($this->relacionesParaPdf())
-            ->latest('fecha_reporte')
-            ->get();
+            ->latest('fecha_reporte');
+
+        $this->aplicarAlcancePdf($query, $usuario);
+        $reportes = $query->get();
 
         $filas = $reportes->map(function (Report $reporte) {
             $fichas = $this->responsablesElementoService->preparar($reporte->elements);
@@ -203,6 +221,34 @@ class ReporteService
             'total' => $reportes->count(),
             'generado_en' => now(),
         ];
+    }
+
+    private function aplicarAlcancePdf(Builder $query, ?User $usuario): void
+    {
+        if ($usuario === null || $usuario->tieneRol('Administrador')) {
+            return;
+        }
+
+        $ambienteIds = $this->ambientesAsignadosIds($usuario);
+        if ($ambienteIds !== []) {
+            $query->whereHas('elements', fn (Builder $q) => $q->whereIn('environment_id', $ambienteIds));
+            return;
+        }
+
+        if ($usuario->tieneRol('Instructor')) {
+            $instructorId = $usuario->teacher?->id;
+            $aprendizIds = $this->aprendicesDeInstructorIds($usuario);
+            $query->where(function (Builder $q) use ($usuario, $instructorId, $aprendizIds) {
+                $q->where('apprentice_id', $usuario->apprentice?->id ?? 0)
+                    ->orWhereHas('elements.assignments', fn (Builder $a) => $a->where('teacher_id', $instructorId));
+                if ($aprendizIds !== []) {
+                    $q->orWhereIn('apprentice_id', $aprendizIds);
+                }
+            });
+            return;
+        }
+
+        $this->restringirConsultaSinAlcance($query);
     }
 
     private function relacionesParaPdf(): array

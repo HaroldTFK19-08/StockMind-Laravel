@@ -2,6 +2,8 @@
 
 namespace App\Modules\Usuarios\Services;
 
+use App\Mail\AccesoAprobadoMail;
+use App\Modules\Auth\Services\AccessCodeService;
 use App\Modules\Auth\Facades\AuthFacade;
 use App\Modules\Roles\Facades\RolFacade;
 use App\Modules\Shared\Enums\EstadoUsuario;
@@ -13,6 +15,8 @@ use App\Modules\Shared\Services\Concerns\GestionaImagenes;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Roles\Models\Rol;
 use App\Modules\Usuarios\Models\User;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class UsuarioService
 {
@@ -23,7 +27,8 @@ class UsuarioService
         private AuthFacade $authFacade,
         private RolFacade $rolFacade,
         private NotificacionService $notificacionService,
-        private CacheService $cache
+        private CacheService $cache,
+        private AccessCodeService $accessCodeService
     ) {}
     public function listar()
     {
@@ -102,18 +107,20 @@ class UsuarioService
         $foto = $datos['foto_perfil'] ?? null;
         $roleIds = $datos['role_ids'] ?? null;
         unset($datos['foto_perfil'], $datos['role_ids'], $datos['password_confirmation']);
-        $rolesAsignados = null;
+        $rolesAsignados = $roleIds !== null
+            ? $this->rolFacade->filtrarParaAsignacion($roleIds)
+            : null;
         $rolesAnteriores = $usuario->roles()->pluck('rol')->sort()->values()->all();
-        if ($roleIds !== null) {
-            $rolesAsignados = $this->rolFacade->filtrarParaAsignacion($roleIds);
-        }
-        // Asignar el rol a una cuenta pendiente la activa y entrega su token.
+        $rolesCambiaron = false;
+        $codigoAcceso = null;
+
         $activarAlAsignarRol = $roleIds !== null
             && $usuario->estado === EstadoUsuario::Pendiente->value
             && ($datos['estado'] ?? null) !== EstadoUsuario::Inactivo->value;
         if ($activarAlAsignarRol) {
             $datos['estado'] = EstadoUsuario::Activo->value;
         }
+
         $tokenNuevo = $this->transaccionConImagen(
             $foto,
             'usuarios',
@@ -123,35 +130,32 @@ class UsuarioService
                 $roleIds,
                 $rolesAsignados,
                 $rolesAnteriores,
-                $activarAlAsignarRol
+                $activarAlAsignarRol,
+                &$rolesCambiaron,
+                &$codigoAcceso
             ) {
                 if ($imagen !== null) {
                     $datos['foto_perfil'] = $imagen['url'];
                     $datos['foto_perfil_public_id'] = $imagen['public_id'];
                 }
+
                 $usuario->update($datos);
-                if ($roleIds !== null) {
-                    $this->validarRolesDePerfiles($usuario, $roleIds);
-                    $usuario->roles()->sync($roleIds);
-                    if ($rolesAsignados !== $rolesAnteriores) {
-                        $this->notificarRolesAsignados($usuario, $rolesAsignados);
-                    }
-                }
-                if (($datos['estado'] ?? null) === EstadoUsuario::Inactivo->value) {
-                    $usuario->tokens()->delete();
-                }
-                return $activarAlAsignarRol
-                    ? $this->authFacade->activarCuenta($usuario)
-                    : null;
+                $this->sincronizarRoles($usuario, $roleIds, $rolesAsignados, $rolesAnteriores, $rolesCambiaron, $codigoAcceso);
+                $this->revocarAccesoSiInactivo($usuario, $datos['estado'] ?? null);
+
+                return $activarAlAsignarRol ? $this->authFacade->activarCuenta($usuario) : null;
             },
             $publicIdAnterior
         );
-        $this->cache->invalidar('usuarios');
 
-        return [
-            'usuario' => $this->mostrar($id),
-            'token' => $tokenNuevo,
-        ];
+        $this->cache->invalidar('usuarios');
+        $usuarioActualizado = $this->mostrar($id);
+
+        if ($rolesCambiaron && $codigoAcceso !== null && $rolesAsignados !== []) {
+            $this->enviarCorreoAccesoAprobado($usuarioActualizado, $rolesAsignados, $codigoAcceso);
+        }
+
+        return ['usuario' => $usuarioActualizado, 'token' => $tokenNuevo];
     }
     public function eliminar(int $id): void
     {
@@ -172,51 +176,113 @@ class UsuarioService
             $this->cloudinaryService->eliminarSinInterrumpir($publicId);
         }
     }
-    /**
-     * Avisa al usuario cuando un administrador cambia sus roles (DSMR-07).
-     *
-     * @param  array<int, string>  $roles
-     */
+    /** @param  array<int, string>  $roles */
     private function notificarRolesAsignados(User $usuario, array $roles): void
     {
         if ($roles === []) {
             return;
         }
+
         $this->notificacionService->aUsuario(
             $usuario->id,
             'Tus roles han sido actualizados',
             'Se te asignaron los roles: ' . implode(', ', $roles) . '.',
             TipoNotificacion::RolAsignado,
-            [
-                'usuario_id' => $usuario->id,
-                'roles' => $roles,
-            ]
+            ['usuario_id' => $usuario->id, 'roles' => $roles]
         );
     }
+
+    /**
+     * @param  array<int, int>|null  $roleIds
+     * @param  array<int, string>|null  $rolesAsignados
+     * @param  array<int, string>  $rolesAnteriores
+     */
+    private function sincronizarRoles(
+        User $usuario,
+        ?array $roleIds,
+        ?array $rolesAsignados,
+        array $rolesAnteriores,
+        bool &$rolesCambiaron,
+        ?string &$codigoAcceso
+    ): void {
+        if ($roleIds === null) {
+            return;
+        }
+
+        $this->validarRolesDePerfiles($usuario, $roleIds);
+        $usuario->roles()->sync($roleIds);
+
+        $rolesCambiaron = $rolesAsignados !== $rolesAnteriores;
+        if (! $rolesCambiaron || $rolesAsignados === null || $rolesAsignados === []) {
+            return;
+        }
+
+        $this->notificarRolesAsignados($usuario, $rolesAsignados);
+        $codigoAcceso = $this->accessCodeService->emitir($usuario);
+    }
+
+    private function revocarAccesoSiInactivo(User $usuario, ?string $estado): void
+    {
+        if ($estado !== EstadoUsuario::Inactivo->value) {
+            return;
+        }
+
+        $usuario->tokens()->delete();
+        $this->accessCodeService->limpiar($usuario);
+    }
+
+    /** @param  array<int, int>  $roleIds */
     private function validarRolesDePerfiles(User $usuario, array $roleIds): void
     {
-        $rolesNecesarios = [];
-        if ($usuario->apprentice()->exists()) {
-            $rolesNecesarios[] = 'Aprendiz';
-        }
-        if ($usuario->teacher()->exists()) {
-            $rolesNecesarios[] = 'Instructor';
-        }
-        if ($usuario->danteaccounts()->exists()) {
-            $rolesNecesarios[] = 'Cuenta-dante';
-        }
+        $rolesNecesarios = $this->rolesNecesariosPorPerfil($usuario);
         if ($rolesNecesarios === []) {
             return;
         }
+
         $rolesIncluidos = Rol::query()
             ->whereIn('id', $roleIds)
             ->whereIn('rol', $rolesNecesarios)
             ->pluck('rol')
             ->all();
+
         if (count($rolesIncluidos) !== count($rolesNecesarios)) {
             throw new ReglasNegocioExceptions(
                 'No se pueden quitar roles que corresponden a perfiles o cuentas DANTE existentes.'
             );
+        }
+    }
+
+    /** @return array<int, string> */
+    private function rolesNecesariosPorPerfil(User $usuario): array
+    {
+        $roles = [];
+        if ($usuario->apprentice()->exists()) {
+            $roles[] = 'Aprendiz';
+        }
+        if ($usuario->teacher()->exists()) {
+            $roles[] = 'Instructor';
+        }
+        if ($usuario->danteaccounts()->exists()) {
+            $roles[] = 'Cuenta-dante';
+        }
+
+        return $roles;
+    }
+
+    /**
+     * @param  array<int, string>  $roles
+     */
+    private function enviarCorreoAccesoAprobado(User $usuario, array $roles, string $codigo): void
+    {
+        try {
+            Mail::to($usuario->email)->send(new AccesoAprobadoMail($usuario, $roles, $codigo));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo enviar correo de acceso aprobado.', [
+                'usuario_id' => $usuario->id,
+                'email' => $usuario->email,
+                'roles' => $roles,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

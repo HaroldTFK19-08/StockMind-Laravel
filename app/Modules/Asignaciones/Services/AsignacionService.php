@@ -6,20 +6,21 @@ use App\Modules\Asignaciones\Models\Assignment;
 use App\Modules\Elementos\Models\Element;
 use App\Modules\Prestamos\Models\Loan;
 use App\Modules\Shared\Enums\TipoNotificacion;
-use Illuminate\Support\Facades\DB;
 use App\Modules\Shared\Services\CacheService;
+use App\Modules\Shared\Services\Concerns\FiltraPdfPorAlcance;
 use App\Modules\Shared\Services\Concerns\GeneraPdf;
 use App\Modules\Shared\Services\Concerns\GestionaDisponibilidadElemento;
 use App\Modules\Shared\Services\NotificacionService;
 use App\Modules\Shared\Services\PDFService;
 use App\Modules\Shared\Services\ResponsablesElementoService;
+use App\Modules\Usuarios\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class AsignacionService
 {
-    // El trait aporta pdfVer() y pdfDescargar(); los datos los construye este servicio.
+    use FiltraPdfPorAlcance;
     use GeneraPdf;
-
-    // Disponibilidad del elemento y recálculo de estado compartidos con préstamos.
     use GestionaDisponibilidadElemento;
 
     protected function vistaPdf(): string
@@ -185,17 +186,19 @@ class AsignacionService
     /**
      * @return array{asignaciones: array<int, array<string, mixed>>, total: int, generado_en: \Illuminate\Support\Carbon}
      */
-    private function datosParaPdf(): array
+    private function datosParaPdf(?User $usuario = null): array
     {
-        $asignaciones = Assignment::query()
+        $query = Assignment::query()
             ->with([
                 'element' => static fn ($query) => $query
                     ->with(ResponsablesElementoService::relacionesParaPdf()),
                 'apprentice.user',
                 'teacher.user',
             ])
-            ->latest('fecha_asignacion')
-            ->get();
+            ->latest('fecha_asignacion');
+
+        $this->aplicarAlcancePdf($query, $usuario);
+        $asignaciones = $query->get();
 
         $filas = $asignaciones->map(function (Assignment $asignacion) {
             $elemento = $asignacion->element;
@@ -227,6 +230,33 @@ class AsignacionService
             'total' => $asignaciones->count(),
             'generado_en' => now(),
         ];
+    }
+
+    private function aplicarAlcancePdf(Builder $query, ?User $usuario): void
+    {
+        if ($usuario === null || $usuario->tieneRol('Administrador')) {
+            return;
+        }
+
+        $ambienteIds = $this->ambientesAsignadosIds($usuario);
+        if ($ambienteIds !== []) {
+            $query->whereHas('element', fn (Builder $q) => $q->whereIn('environment_id', $ambienteIds));
+            return;
+        }
+
+        if ($usuario->tieneRol('Instructor')) {
+            $instructorId = $usuario->teacher?->id;
+            $aprendizIds = $this->aprendicesDeInstructorIds($usuario);
+            $query->where(function (Builder $q) use ($instructorId, $aprendizIds) {
+                $q->where('teacher_id', $instructorId);
+                if ($aprendizIds !== []) {
+                    $q->orWhereIn('apprentice_id', $aprendizIds);
+                }
+            });
+            return;
+        }
+
+        $this->restringirConsultaSinAlcance($query);
     }
 
     /**

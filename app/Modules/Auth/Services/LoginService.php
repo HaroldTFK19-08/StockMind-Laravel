@@ -12,7 +12,8 @@ use Laravel\Sanctum\PersonalAccessToken;
 class LoginService
 {
     public function __construct(
-        private TokenService $tokenService
+        private TokenService $tokenService,
+        private AccessCodeService $accessCodeService
     ) {}
 
     public function login(array $credenciales): array
@@ -29,7 +30,20 @@ class LoginService
         // 2. Verificar que esté aprobado y activo
         $this->validarEstado($usuario);
 
-        // 3. Crear el token (reemplaza la sesión)
+        // 3. Validar código de acceso si fue emitido por el admin
+        if (! empty($usuario->access_code_hash)) {
+            $codigo = $credenciales['codigo'] ?? null;
+            if (! is_string($codigo) || $codigo === '') {
+                throw ValidationException::withMessages([
+                    'codigo' => ['Debes ingresar el código de acceso enviado a tu correo.'],
+                ]);
+            }
+
+            $this->accessCodeService->verificar($usuario, $codigo);
+            $usuario->refresh();
+        }
+
+        // 4. Crear el token (reemplaza la sesión)
         $token = $this->tokenService->emitir($usuario);
 
         return [

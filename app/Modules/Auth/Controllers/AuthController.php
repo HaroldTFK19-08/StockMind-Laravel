@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Auth\Facades\AuthFacade;
 use App\Modules\Auth\Requests\LoginRequest;
 use App\Modules\Auth\Requests\RegisterRequest;
+use App\Modules\Auth\Requests\VerificarCodigoAccesoRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,6 +32,14 @@ class AuthController extends Controller
         // Devuelve: mensaje, token y usuario con sus roles
         return response()->json(
             $this->authFacade->login($request->validated())
+        );
+    }
+
+    // POST /api/v1/auth/verificar-codigo
+    public function verificarCodigo(VerificarCodigoAccesoRequest $request): JsonResponse
+    {
+        return response()->json(
+            $this->authFacade->verificarCodigoAcceso($request->validated())
         );
     }
     // POST /api/v1/auth/logout  (requiere token)

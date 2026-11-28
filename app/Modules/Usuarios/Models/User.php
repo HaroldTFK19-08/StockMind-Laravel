@@ -38,6 +38,10 @@ class User extends Authenticatable
         'email',
         'password',
         'estado',
+        'access_code_hash',
+        'access_code_expires_at',
+        'access_code_used_at',
+        'access_code_attempts',
     ];
     /**
      * The attributes that should be hidden for serialization.
@@ -47,6 +51,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'access_code_hash',
+        'access_code_attempts',
     ];
     /**
      * The attributes that should be cast.
@@ -56,6 +62,10 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'access_code_hash' => 'hashed',
+        'access_code_expires_at' => 'datetime',
+        'access_code_used_at' => 'datetime',
+        'access_code_attempts' => 'integer',
     ];
     protected static function newFactory(): Factory
     {
